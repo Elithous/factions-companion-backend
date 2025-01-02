@@ -1,0 +1,28 @@
+{
+  "type": "module",
+  "scripts": {
+    "start": "npx tsx src/app.ts",
+    "sniffer": "npx tsx src/scripts/startSniffer.ts",
+    "test": "npx tsx src/tmp/wsTestClient.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "fs": "^0.0.1-security",
+    "luxon": "^3.4.4",
+    "mysql": "^2.18.1",
+    "mysql2": "^3.11.5",
+    "reconnecting-websocket": "^4.4.0",
+    "sequelize": "^6.37.5",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/luxon": "^3.4.2",
+    "@types/node": "^20.17.10",
+    "@types/ws": "^8.5.13",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.7.2",
+    "typescript": "^5.7.2"
+  }
+}
