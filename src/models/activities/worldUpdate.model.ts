@@ -22,7 +22,6 @@ export class WorldUpdateModel extends BaseModel<InferAttributes<WorldUpdateModel
     declare game_id: number;
     declare x: number;
     declare y: number;
-    declare raw_json_id: number;
 
     declare amounts?: NonAttribute<WorldUpdateAmountModel[]>;
 
@@ -56,10 +55,6 @@ export class WorldUpdateModel extends BaseModel<InferAttributes<WorldUpdateModel
                 type: DataTypes.INTEGER
             },
             y: {
-                type: DataTypes.INTEGER
-            },
-            raw_json_id: {
-                // I do not add this as a forgein key so associations aren't needed. This field is only for manual debugging anyway
                 type: DataTypes.INTEGER
             }
         }

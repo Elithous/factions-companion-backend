@@ -1,7 +1,7 @@
 import { DataTypes, ModelAttributes, ModelStatic, ModelOptions, InferAttributes, InferCreationAttributes, Sequelize } from "sequelize";
 import { BaseModel } from "./base.model";
 
-export class RawJsonModel extends BaseModel<InferAttributes<RawJsonModel>, InferCreationAttributes<RawJsonModel>> {
+export class GameSettingsModel extends BaseModel<InferAttributes<GameSettingsModel>, InferCreationAttributes<GameSettingsModel>> {
     declare type: string;
     declare data: any;
     declare created_at: string | Date;
@@ -35,7 +35,7 @@ export class RawJsonModel extends BaseModel<InferAttributes<RawJsonModel>, Infer
     }
 }
 
-export declare type RawJsonType = typeof RawJsonModel;
-export declare type RawJsonCtor = {
-    new (): RawJsonModel;
-} & RawJsonModel;
+export declare type GameSettingsType = typeof GameSettingsModel;
+export declare type GameSettingsCtor = {
+    new (): GameSettingsModel;
+} & GameSettingsModel;

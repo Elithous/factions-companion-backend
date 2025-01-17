@@ -5,7 +5,18 @@ import { WorldUpdateModel } from "./worldUpdate.model";
 export class WorldUpdateAmountModel extends BaseModel<InferAttributes<WorldUpdateAmountModel>, InferCreationAttributes<WorldUpdateAmountModel>> {
     declare updated_at: number;
     declare amount: number;
-    declare data: any;
+    // soldiers
+    declare captured: boolean;
+    declare previous_faction: string;
+    // support_sent
+    declare support_type: string;
+    declare kill: boolean;
+    declare power: number;
+    declare killed_faction: string;
+    // workers
+    declare project_type: string;
+
+    declare raw_json_id: number;
 
     declare worldUpdate: NonAttribute<WorldUpdateModel>;
     declare world_update_parent: ForeignKey<WorldUpdateModel['id']>;
@@ -19,8 +30,27 @@ export class WorldUpdateAmountModel extends BaseModel<InferAttributes<WorldUpdat
             amount: {
                 type: DataTypes.INTEGER
             },
-            data: {
-                type: DataTypes.JSON
+            captured: {
+                type: DataTypes.BOOLEAN
+            },
+            previous_faction: {
+                type: DataTypes.STRING
+            },
+            kill: {
+                type: DataTypes.BOOLEAN
+            },
+            power: {
+                type: DataTypes.DECIMAL(6,2)
+            },
+            killed_faction: {
+                type: DataTypes.STRING
+            },
+            project_type: {
+                type: DataTypes.STRING
+            },
+            raw_json_id: {
+                // I do not add this as a forgein key so associations aren't needed. This field is only for manual debugging anyway
+                type: DataTypes.INTEGER
             }
         }
     }

@@ -2,7 +2,7 @@ import WebSocket from "ws";
 import ReconnectingWebSocket from "reconnecting-websocket"
 import fs from 'fs';
 import { PlayerActivity } from "../types/playerActivity.type";
-import { processWorldSocket } from "../services/factionsWebsocket.service";
+import { handleMessage } from "../services/factionsWebsocket.service";
 
 const worldSockets: { [gameId: number]: ReconnectingWebSocket } = {};
 const factionSocket: { [gameId: number]: ReconnectingWebSocket } = {};
@@ -37,16 +37,12 @@ export async function startWorldSocket(gameId: string) {
       console.log(event);
     });
     
-    let messages = [];
     worldSocket.addEventListener('message', (event) => {
       const json = JSON.parse(event.data);
+
       const message = JSON.stringify(json);
       console.log(`Received message from server: ${message}`);
-      processWorldSocket(json);
+
+      handleMessage('world_socket', json);
     });
-    
-    // setInterval(() => {
-    //     let log = messages.join('\n');
-    //     fs.writeFileSync('./log.txt', log);
-    // }, 60000);
 }
