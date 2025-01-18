@@ -11,7 +11,7 @@ networks:
   backend:
     driver: bridge
 services:
-  backend:
+  server:
     build:
       context: .
     environment:

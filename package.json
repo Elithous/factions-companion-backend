@@ -14,7 +14,7 @@
     "mysql2": "^3.11.5",
     "reconnecting-websocket": "^4.4.0",
     "sequelize": "^6.37.5",
-    "ws": "^8.18.0",
+    "ws": "git://github.com/Elithous/ws.git",
     "tsx": "^4.7.2"
   },
   "devDependencies": {
