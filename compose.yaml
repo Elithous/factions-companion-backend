@@ -20,6 +20,8 @@ services:
       - 3000:3000
     networks:
       - backend
+    env_file:
+      - docker.env
     depends_on:
       db:
         condition: service_healthy

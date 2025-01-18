@@ -2,6 +2,7 @@
   "type": "module",
   "scripts": {
     "start": "npx tsx src/app.ts",
+    "dev": "npx tsx watch src/app.ts",
     "sniffer": "npx tsx src/scripts/startSniffer.ts",
     "test": "npx tsx src/tmp/wsTestClient.ts",
     "docker-start": "docker compose up --build"
@@ -14,15 +15,14 @@
     "mysql2": "^3.11.5",
     "reconnecting-websocket": "^4.4.0",
     "sequelize": "^6.37.5",
-    "ws": "git://github.com/Elithous/ws.git",
-    "tsx": "^4.7.2"
+    "tsx": "^4.7.2",
+    "ws": "git://github.com/Elithous/ws.git"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/luxon": "^3.4.2",
     "@types/node": "^20.17.10",
     "@types/ws": "^8.5.13",
-    "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
   }
 }

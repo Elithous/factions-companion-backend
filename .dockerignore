@@ -31,5 +31,6 @@
 **/dist
 **/db-data
 **/data-dump
+**/*.env
 LICENSE
 README.md
