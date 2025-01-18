@@ -7,7 +7,8 @@ import { processWorldMessages, readWorldMessagesFile } from './services/factions
 async function start() {
     await initDB();
     // await processWorldMessagesFile('./src/tmp/log_end.txt');
-    await processWorldMessages(true);
+    // await processWorldMessages(true);
+    console.log('Online!');
     // console.log(await getHqInfo());
     // displayCosts('HQ', { maxLevel: 30 });
     // showData(gameId);
