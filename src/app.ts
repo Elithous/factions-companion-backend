@@ -3,6 +3,7 @@ import { displayCosts } from './util/optimizer';
 import { showData } from './util/jank-parser';
 import { initDB } from './controllers/database.controller';
 import { processWorldMessages, readWorldMessagesFile } from './services/factionsWebsocket.service';
+import express, { Express, Request, Response } from 'express';
 
 async function start() {
     await initDB();
@@ -19,3 +20,15 @@ start();
 
 // Start WebSocket listeners
 // startWorldSocket(gameId);
+
+// Express setup
+const app: Express = express();
+const port = 3000;
+
+app.get('/', (req: Request, res: Response) => {
+    res.send('Express Server');
+});
+
+app.listen(port, () => {
+    console.log(`[server]: Server is running at http://localhost:${port}`);
+});
