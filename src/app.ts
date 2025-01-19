@@ -4,13 +4,21 @@ import { displayCosts } from './util/optimizer';
 import { showData } from './util/jank-parser';
 import { initDB } from './controllers/database.controller';
 import { processWorldMessages, readWorldMessagesFile } from './services/factionsWebsocket.service';
+import { getSetting, initSettings } from './services/settings.service';
 import routes from './routes';
+import { startWorldSocket } from './controllers/factionsWebsocket.controller';
 
 async function start() {
     await initDB();
+    await initSettings();
 
     // TODO: Get currently watched games and start their threads.
     // Watch websockets and process the information
+    getSetting('socket').then(setting => {
+        if (setting?.watchList) {
+            setting.watchList.forEach(value => startWorldSocket(value));
+        }
+    });
     // Get current game settings to allow cost calcs
     // Maybe something with the map?
 

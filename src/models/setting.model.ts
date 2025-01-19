@@ -1,16 +1,16 @@
 import { DataTypes, ModelAttributes, ModelStatic, ModelOptions, InferAttributes, InferCreationAttributes, Sequelize } from "sequelize";
 import { BaseModel } from "./base.model";
 
-export class GameSettingsModel extends BaseModel<InferAttributes<GameSettingsModel>, InferCreationAttributes<GameSettingsModel>> {
-    declare tag: string;
+export class SettingsModel extends BaseModel<InferAttributes<SettingsModel>, InferCreationAttributes<SettingsModel>> {
+    declare key: string;
     declare data: any;
-    declare created_at: string | Date;
-    declare updated_at: string | Date;
+    declare created_at?: string | Date;
+    declare updated_at?: string | Date;
 
     static modelAttributes(): ModelAttributes {
         return {
             ...super.modelAttributes(),
-            tag: {
+            key: {
                 type: DataTypes.STRING
             },
             data: {
@@ -30,8 +30,11 @@ export class GameSettingsModel extends BaseModel<InferAttributes<GameSettingsMod
     static modelOptions(): ModelOptions {
         return {
             ...super.modelOptions(),
-            modelName: 'GameSetting',
-            tableName: 'game_setting'
+            timestamps: true,
+            createdAt: 'created_at',
+            updatedAt: 'updated_at',
+            modelName: 'Setting',
+            tableName: 'setting'
         }
     }
 
@@ -40,7 +43,7 @@ export class GameSettingsModel extends BaseModel<InferAttributes<GameSettingsMod
     }
 }
 
-export declare type GameSettingsType = typeof GameSettingsModel;
-export declare type GameSettingsCtor = {
-    new (): GameSettingsModel;
-} & GameSettingsModel;
+export declare type SettingsType = typeof SettingsModel;
+export declare type SettingsCtor = {
+    new (): SettingsModel;
+} & SettingsModel;

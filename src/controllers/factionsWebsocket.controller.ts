@@ -3,9 +3,10 @@ import ReconnectingWebSocket from "reconnecting-websocket"
 import fs from 'fs';
 import { PlayerActivity } from "../types/playerActivity.type";
 import { handleMessage } from "../services/factionsWebsocket.service";
+import { getSetting, setSetting } from "../services/settings.service";
 
-const worldSockets: { [gameId: number]: ReconnectingWebSocket } = {};
-const factionSocket: { [gameId: number]: ReconnectingWebSocket } = {};
+const worldSockets: { [gameId: string]: ReconnectingWebSocket } = {};
+const factionSocket: { [gameId: string]: ReconnectingWebSocket } = {};
 
 export type FactionSocketData = {
     type: 'new_vote'
@@ -30,27 +31,46 @@ export async function startWorldSocket(gameId: string) {
         });
 
         worldSockets[gameId] = ws;
+        
+        ws.addEventListener('error', (event) => {
+          console.log(event);
+        });
+        
+        ws.addEventListener('message', (event) => {
+          const json = JSON.parse(event.data);
+    
+          const message = JSON.stringify(json);
+          console.log(`Received message from server: ${message}`);
+    
+          handleMessage('world_socket', json);
+        });
     }
-    const worldSocket = worldSockets[gameId];
-    
-    worldSocket.addEventListener('error', (event) => {
-      console.log(event);
-    });
-    
-    worldSocket.addEventListener('message', (event) => {
-      const json = JSON.parse(event.data);
+}
 
-      const message = JSON.stringify(json);
-      console.log(`Received message from server: ${message}`);
+export async function stopWorldSocket(gameId: string) {
+    const socket = worldSockets[gameId];
+    if (socket?.OPEN) {
+        socket.close(1001);
 
-      handleMessage('world_socket', json);
-    });
+        delete worldSockets[gameId];
+    }
 }
 
 export async function watchGame(gameId: string) {
+    const socketSetting = await getSetting('socket');
+    socketSetting.watchList.push(gameId);
+    setSetting('socket', socketSetting);
+    
+    await startWorldSocket(gameId);
     console.log(`Watching game ${gameId}`);
+    // TODO: Also watch worker queue, leaderboard?, chat?
 }
 
 export async function unwatchGame(gameId: string) {
+    const socketSetting = await getSetting('socket');
+    socketSetting.watchList = socketSetting.watchList.filter(id => id !== gameId);
+    setSetting('socket', socketSetting);
+
+    await stopWorldSocket(gameId);
     console.log(`Unwatched game ${gameId}`);
 }

@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 
-import { watchGame } from '../controllers/factionsWebsocket.controller';
+import { unwatchGame, watchGame } from '../controllers/factionsWebsocket.controller';
 
 const router = express.Router();
 
@@ -26,7 +26,7 @@ router.delete('/watch/:gameId', async (req: Request<{gameId: string }>, res: Res
             throw new Error('Game ID not supplied.');
         }
         // TODO: Add validation and check if we are already watching this game.
-        await watchGame(gameId);
+        await unwatchGame(gameId);
 
         res.status(204).send();
     } catch (error) {

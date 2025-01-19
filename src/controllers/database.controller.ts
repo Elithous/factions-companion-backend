@@ -4,7 +4,7 @@ import factionsConfig from '../config/factions.config';
 import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
 import { RawJsonModel } from '../models/rawJson.model';
 import { WorldUpdateAmountModel } from '../models/activities/worldUpdate.amount.model';
-import { GameSettingsModel } from "../models/gameSettings.model";
+import { SettingsModel } from "../models/setting.model";
 
 export let sequelize: Sequelize;
 
@@ -12,7 +12,7 @@ const models = [
     WorldUpdateModel,
     WorldUpdateAmountModel,
     RawJsonModel,
-    GameSettingsModel
+    SettingsModel
 ];
 
 export async function initDB() {
