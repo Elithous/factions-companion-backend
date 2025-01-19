@@ -46,3 +46,11 @@ export async function startWorldSocket(gameId: string) {
       handleMessage('world_socket', json);
     });
 }
+
+export async function watchGame(gameId: string) {
+    console.log(`Watching game ${gameId}`);
+}
+
+export async function unwatchGame(gameId: string) {
+    console.log(`Unwatched game ${gameId}`);
+}

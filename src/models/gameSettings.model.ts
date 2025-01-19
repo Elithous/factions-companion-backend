@@ -2,20 +2,25 @@ import { DataTypes, ModelAttributes, ModelStatic, ModelOptions, InferAttributes,
 import { BaseModel } from "./base.model";
 
 export class GameSettingsModel extends BaseModel<InferAttributes<GameSettingsModel>, InferCreationAttributes<GameSettingsModel>> {
-    declare type: string;
+    declare tag: string;
     declare data: any;
     declare created_at: string | Date;
+    declare updated_at: string | Date;
 
     static modelAttributes(): ModelAttributes {
         return {
             ...super.modelAttributes(),
-            type: {
+            tag: {
                 type: DataTypes.STRING
             },
             data: {
                 type: DataTypes.JSON
             },
             created_at: {
+                type: DataTypes.DATE,
+                defaultValue: Sequelize.fn('now')
+            },
+            updated_at: {
                 type: DataTypes.DATE,
                 defaultValue: Sequelize.fn('now')
             }
@@ -25,8 +30,8 @@ export class GameSettingsModel extends BaseModel<InferAttributes<GameSettingsMod
     static modelOptions(): ModelOptions {
         return {
             ...super.modelOptions(),
-            modelName: 'RawJson',
-            tableName: 'raw_json'
+            modelName: 'GameSetting',
+            tableName: 'game_setting'
         }
     }
 

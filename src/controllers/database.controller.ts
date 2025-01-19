@@ -4,18 +4,20 @@ import factionsConfig from '../config/factions.config';
 import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
 import { RawJsonModel } from '../models/rawJson.model';
 import { WorldUpdateAmountModel } from '../models/activities/worldUpdate.amount.model';
+import { GameSettingsModel } from "../models/gameSettings.model";
 
 export let sequelize: Sequelize;
 
 const models = [
     WorldUpdateModel,
     WorldUpdateAmountModel,
-    RawJsonModel
+    RawJsonModel,
+    GameSettingsModel
 ];
 
 export async function initDB() {
     sequelize = new Sequelize(
-        `game-${factionsConfig.GAME_ID}`,
+        config.DB_NAME,
         config.DB_USER,
         config.DB_PASSWORD,
         {

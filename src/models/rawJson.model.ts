@@ -5,6 +5,7 @@ export class RawJsonModel extends BaseModel<InferAttributes<RawJsonModel>, Infer
     declare type: string;
     declare data: any;
     declare created_at: string | Date;
+    declare processed: boolean;
 
     static modelAttributes(): ModelAttributes {
         return {
@@ -18,6 +19,10 @@ export class RawJsonModel extends BaseModel<InferAttributes<RawJsonModel>, Infer
             created_at: {
                 type: DataTypes.DATE,
                 defaultValue: Sequelize.fn('now')
+            },
+            processed: {
+                type: DataTypes.BOOLEAN,
+                defaultValue: false
             }
         }
     }
