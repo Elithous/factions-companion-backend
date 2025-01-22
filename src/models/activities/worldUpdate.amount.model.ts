@@ -16,6 +16,9 @@ export class WorldUpdateAmountModel extends BaseModel<InferAttributes<WorldUpdat
     // workers
     declare project_type: string;
 
+    declare tile_faction: string;
+    declare tile_soldiers: number;
+
     declare raw_json_id: number;
 
     declare worldUpdate: NonAttribute<WorldUpdateModel>;
@@ -36,6 +39,9 @@ export class WorldUpdateAmountModel extends BaseModel<InferAttributes<WorldUpdat
             previous_faction: {
                 type: DataTypes.STRING
             },
+            support_type: {
+                type: DataTypes.STRING
+            },
             kill: {
                 type: DataTypes.BOOLEAN
             },
@@ -47,6 +53,12 @@ export class WorldUpdateAmountModel extends BaseModel<InferAttributes<WorldUpdat
             },
             project_type: {
                 type: DataTypes.STRING
+            },
+            tile_faction: {
+                type: DataTypes.STRING
+            },
+            tile_soldiers: {
+                type: DataTypes.INTEGER
             },
             raw_json_id: {
                 // I do not add this as a forgein key so associations aren't needed. This field is only for manual debugging anyway

@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 
 import { unwatchGame, watchGame } from '../controllers/factionsWebsocket.controller';
+import { processWorldMessages } from '../services/factionsWebsocket.service';
 
 const router = express.Router();
 
@@ -31,6 +32,16 @@ router.delete('/watch/:gameId', async (req: Request<{gameId: string }>, res: Res
         res.status(204).send();
     } catch (error) {
         res.status(400).json({ message: `Error removing game watch: ${error}`});
+    }
+});
+
+router.post('/parse', async (req: Request, res: Response) => {
+    try {
+        await processWorldMessages(true);
+
+        res.status(204).send();
+    } catch (error) {
+        res.status(400).json({ message: `Error processing messages: ${error}`});
     }
 });
 

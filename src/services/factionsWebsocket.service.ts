@@ -52,6 +52,7 @@ export async function processWorldMessages(reprocess: boolean = false) {
     if (reprocess) {
         // Clear old data and re-process everything from json data.
         await WorldUpdateModel.destroy({ cascade: true, where: {} });
+        await RawJsonModel.update({ processed: false }, { where: {}});
     }
 
     const type: QueueTypes = 'world_socket';
@@ -60,59 +61,99 @@ export async function processWorldMessages(reprocess: boolean = false) {
         attributes: ['id', 'data'],
         where: {
             type,
-            id: {
-                [Op.notIn]: Sequelize.literal(`(
-                    SELECT DISTINCT
-                        raw_json_id
-                    FROM world_update_amount
-                )`)
-            }
-        }
+            processed: false
+        },
+        order: ['id']
     });
+    // "Preprocess" some aspects of each message
+    const activityMessages: RawJsonModel[] = [];
+    for (let index = 0; index < unprocessedMessages.length; index++) {
+        const message = unprocessedMessages[index];
+        if (message.data?.activity?.id) {
+            // I process data with activity ids by groups so I remove it from the unprocessed array into a new array.
+            activityMessages.push(unprocessedMessages.splice(index--, 1)[0]);
+        }
+    }
+
+    // Sort the activity messages so the same activity ids are next to each other
+    activityMessages.sort((a, b) => a.data.activity.id - b.data.activity.id);
 
     try {
         const processedIds = [];
-        for (const rawJson of unprocessedMessages) {
-            const data = rawJson.data;
-            const activity = data.activity as PlayerActivity;
+        for (let index = 0; index < unprocessedMessages.length; index++) {
+            const dataId = unprocessedMessages[index].id;
+            const data = unprocessedMessages[index].data;
             if (data?.type === PlayerActivityType.INITIAL_ACTIVITIES) {
                 // Do nothing for now
                 // With activity ids we can check if we missed anything after a restart.
                 continue;
             }
-            if (activity?.id) {
-                // Skip the id if it's already processed.
-                if (processedIds.includes(activity.id)) {
-                    continue;
-                }
-                processedIds.push (activity.id);
-
-                // Find all duplicate id entries
-                const amounts = unprocessedMessages
-                    .filter(message => message.data?.activity?.id === activity.id)
-                    .map(message => {
-                        const activity = message.data.activity as PlayerActivity;
-                        return {
-                            amount: activity.amount,
-                            updated_at: activity.updated_at,
-                            raw_json_id: rawJson.id,
-                            support_type: activity.name,
-                            ...activity.data
-                        };
-                        
-                    });
-                // Upsert so we don't get an error on a race condition for the entry being created.
-                const worldUpdate: CreationAttributes<WorldUpdateModel> & { amounts: CreationAttributes<WorldUpdateAmountModel>; } = {
-                    ...activity,
-                    player: activity.player.id,
-                    name: activity.player.username,
-                    amounts
-                };
-
-                saveWorldMessages(worldUpdate);
-            }
         }
+
+        for (let index = 0; index < activityMessages.length; index++) {
+            const dataId = activityMessages[index].id;
+            const activity = activityMessages[index].data.activity;
+            
+            // Skip the id if it's already processed. This is for sanity as we should be skipping 
+            if (processedIds.includes(dataId)) {
+                continue;
+            }
+
+            // Find all duplicate id entries
+            const groupActivities = [];
+            // Use the top level index so we don't re-process the duplicate id entries
+            for (; index < activityMessages.length; index++) {
+                if (activity.id === activityMessages[index].data.activity.id) {
+                    groupActivities.push(activityMessages[index]);
+                }
+                else {
+                    index--;
+                    // Messages are sorted by id so all paired ids will be adjacent
+                    break;
+                }
+            }
+
+            const amounts: CreationAttributes<WorldUpdateAmountModel>[] = groupActivities
+                .map<CreationAttributes<WorldUpdateAmountModel>>(message => {
+                    processedIds.push(dataId);
+
+                    const activity = message.data.activity as PlayerActivity;
+                    const tileData = message.data.t;
+                    return {
+                        amount: activity.amount,
+                        updated_at: activity.updated_at,
+                        raw_json_id: dataId,
+                        support_type: activity.name,
+                        tile_faction: tileData?.f,
+                        tile_soldiers: tileData?.s,
+                        ...activity.data
+                    };
+                    
+                });
+
+            // Upsert so we don't get an error on a race condition for the entry being created.
+            const worldUpdate: CreationAttributes<WorldUpdateModel> & { amounts: CreationAttributes<WorldUpdateAmountModel>; } = {
+                ...activity,
+                player: activity.player.id,
+                name: activity.player.username,
+                amounts
+            };
+            
+            if (index % 1000 === 0) console.log(`${index}/${activityMessages.length}`);
+            saveWorldMessages(worldUpdate);
+        }
+
         saveWorldMessages(null, false);
+
+        // Update processed flag for processed json messages
+        RawJsonModel.update({
+            processed: true
+        }, {
+            where: {
+                id: processedIds
+            }
+        });
+
     } catch (error) {
         // Print out the error for now so the process keeps running.
         console.log(error);

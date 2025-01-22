@@ -21,6 +21,7 @@ export async function initDB() {
         config.DB_USER,
         config.DB_PASSWORD,
         {
+            logging: false,
             host: config.DB_HOST,
             dialect: 'mysql'
         }
