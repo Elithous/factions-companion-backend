@@ -56,7 +56,6 @@ export async function processWorldMessages(reprocess: boolean = false) {
     }
 
     const type: QueueTypes = 'world_socket';
-    // TODO: Change the processed check to be on the raw json table or amount table
     const unprocessedMessages = await RawJsonModel.findAll({
         attributes: ['id', 'data'],
         where: {
@@ -90,6 +89,7 @@ export async function processWorldMessages(reprocess: boolean = false) {
             }
         }
 
+        // Process the activity messages seperated out previously.
         for (let index = 0; index < activityMessages.length; index++) {
             const dataId = activityMessages[index].id;
             const activity = activityMessages[index].data.activity;
