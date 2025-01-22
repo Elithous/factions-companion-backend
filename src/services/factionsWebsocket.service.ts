@@ -3,7 +3,6 @@ import { RawJsonModel } from "../models/rawJson.model";
 import { WorldUpdateModel } from "../models/activities/worldUpdate.model";
 import { PlayerActivity, PlayerActivityType } from "../types/playerActivity.type";
 import { CreationAttributes, InferAttributes, Op, Sequelize } from 'sequelize';
-import { WorldUpdateAmountModel } from '../models/activities/worldUpdate.amount.model';
 
 type QueueTypes = 'world_socket'
 
@@ -52,7 +51,7 @@ export async function processWorldMessages(reprocess: boolean = false) {
     if (reprocess) {
         // Clear old data and re-process everything from json data.
         await WorldUpdateModel.destroy({ cascade: true, where: {} });
-        await RawJsonModel.update({ processed: false }, { where: {}});
+        await RawJsonModel.update({ processed: false }, { where: {} });
     }
 
     const type: QueueTypes = 'world_socket';
@@ -64,21 +63,10 @@ export async function processWorldMessages(reprocess: boolean = false) {
         },
         order: ['id']
     });
-    // "Preprocess" some aspects of each message
-    const activityMessages: RawJsonModel[] = [];
-    for (let index = 0; index < unprocessedMessages.length; index++) {
-        const message = unprocessedMessages[index];
-        if (message.data?.activity?.id) {
-            // I process data with activity ids by groups so I remove it from the unprocessed array into a new array.
-            activityMessages.push(unprocessedMessages.splice(index--, 1)[0]);
-        }
-    }
-
-    // Sort the activity messages so the same activity ids are next to each other
-    activityMessages.sort((a, b) => a.data.activity.id - b.data.activity.id);
 
     try {
         const processedIds = [];
+        const newActivity = [];
         for (let index = 0; index < unprocessedMessages.length; index++) {
             const dataId = unprocessedMessages[index].id;
             const data = unprocessedMessages[index].data;
@@ -87,63 +75,44 @@ export async function processWorldMessages(reprocess: boolean = false) {
                 // With activity ids we can check if we missed anything after a restart.
                 continue;
             }
+
+            if (data?.activity?.id) {
+
+                const activity = data.activity as PlayerActivity;
+                const tileData = data.t;
+
+                // Upsert so we don't get an error on a race condition for the entry being created.
+                const worldUpdate: CreationAttributes<WorldUpdateModel> = {
+                    ...activity,
+                    ...activity.data,
+                    support_type: activity.name,
+                    player_id: activity.player.id,
+                    player_name: activity.player.username,
+                    player_faction: activity.faction,
+                    tile_player: tileData?.p,
+                    tile_faction: tileData?.f,
+                    tile_soldiers: tileData?.s,
+                    raw_json_id: dataId
+                };
+                
+                newActivity.push(worldUpdate);
+                processedIds.push(dataId);
+
+                if (index % 1000 === 0) console.log(`${index}/${unprocessedMessages.length}`);
+            }
         }
 
-        // Process the activity messages seperated out previously.
-        for (let index = 0; index < activityMessages.length; index++) {
-            const dataId = activityMessages[index].id;
-            const activity = activityMessages[index].data.activity;
-            
-            // Skip the id if it's already processed. This is for sanity as we should be skipping 
-            if (processedIds.includes(dataId)) {
-                continue;
+        // Remove duplicate entries within new entries
+        const unduped: { [id: number]: CreationAttributes<WorldUpdateModel> } = {};
+        newActivity.forEach(update => {
+            const mostRecent = unduped[update.id]?.updated_at ?? 0;
+            if (update.updated_at > mostRecent) {
+                unduped[update.id] = update;
             }
-
-            // Find all duplicate id entries
-            const groupActivities = [];
-            // Use the top level index so we don't re-process the duplicate id entries
-            for (; index < activityMessages.length; index++) {
-                if (activity.id === activityMessages[index].data.activity.id) {
-                    groupActivities.push(activityMessages[index]);
-                }
-                else {
-                    index--;
-                    // Messages are sorted by id so all paired ids will be adjacent
-                    break;
-                }
-            }
-
-            const amounts: CreationAttributes<WorldUpdateAmountModel>[] = groupActivities
-                .map<CreationAttributes<WorldUpdateAmountModel>>(message => {
-                    processedIds.push(dataId);
-
-                    const activity = message.data.activity as PlayerActivity;
-                    const tileData = message.data.t;
-                    return {
-                        amount: activity.amount,
-                        updated_at: activity.updated_at,
-                        raw_json_id: dataId,
-                        support_type: activity.name,
-                        tile_faction: tileData?.f,
-                        tile_soldiers: tileData?.s,
-                        ...activity.data
-                    };
-                    
-                });
-
-            // Upsert so we don't get an error on a race condition for the entry being created.
-            const worldUpdate: CreationAttributes<WorldUpdateModel> & { amounts: CreationAttributes<WorldUpdateAmountModel>; } = {
-                ...activity,
-                player: activity.player.id,
-                name: activity.player.username,
-                amounts
-            };
-            
-            if (index % 1000 === 0) console.log(`${index}/${activityMessages.length}`);
-            saveWorldMessages(worldUpdate);
-        }
-
-        saveWorldMessages(null, false);
+        });
+        WorldUpdateModel.bulkCreate(Object.values(unduped), {
+            updateOnDuplicate: ['id']
+        });
 
         // Update processed flag for processed json messages
         RawJsonModel.update({
@@ -159,26 +128,6 @@ export async function processWorldMessages(reprocess: boolean = false) {
         console.log(error);
     }
     
-}
-
-const updateQueue: CreationAttributes<WorldUpdateModel>[] = [];
-async function saveWorldMessages(model: CreationAttributes<WorldUpdateModel>, bulk: boolean = true) {
-    if (model) {
-        updateQueue.push(model);
-    }
-
-    if (!bulk || updateQueue.length >= queueLimit) {
-        const batch = updateQueue.splice(0, queueLimit);
-        WorldUpdateModel.bulkCreate(
-            batch,
-            {
-                updateOnDuplicate: ['id'],
-                include: [{
-                    model: WorldUpdateAmountModel,
-                    as: 'amounts'
-                }]
-            });
-    }
 }
 
 export async function readWorldMessagesFile(path: string) {

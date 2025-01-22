@@ -3,14 +3,12 @@ import config from '../config/config';
 import factionsConfig from '../config/factions.config';
 import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
 import { RawJsonModel } from '../models/rawJson.model';
-import { WorldUpdateAmountModel } from '../models/activities/worldUpdate.amount.model';
 import { SettingsModel } from "../models/setting.model";
 
 export let sequelize: Sequelize;
 
 const models = [
     WorldUpdateModel,
-    WorldUpdateAmountModel,
     RawJsonModel,
     SettingsModel
 ];
