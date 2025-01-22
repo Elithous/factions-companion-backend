@@ -65,40 +65,34 @@ export async function processWorldMessages(reprocess: boolean = false) {
     });
 
     try {
-        const processedIds = [];
-        const newActivity = [];
-        for (let index = 0; index < unprocessedMessages.length; index++) {
-            const dataId = unprocessedMessages[index].id;
-            const data = unprocessedMessages[index].data;
-            if (data?.type === PlayerActivityType.INITIAL_ACTIVITIES) {
-                // Do nothing for now
-                // With activity ids we can check if we missed anything after a restart.
-                continue;
+        const processedIds: number[] = [];
+        const newActivity: CreationAttributes<WorldUpdateModel>[] = [];
+        for (const message of unprocessedMessages) {
+            const data = message.data;
+
+            if (data?.hash) {
+                // Mark hash updates as processed for now.
+                // They can contain tile updates but I am not worrying about those right now.
+                processedIds.push(message.id);
             }
-
-            if (data?.activity?.id) {
-
-                const activity = data.activity as PlayerActivity;
-                const tileData = data.t;
-
-                // Upsert so we don't get an error on a race condition for the entry being created.
-                const worldUpdate: CreationAttributes<WorldUpdateModel> = {
-                    ...activity,
-                    ...activity.data,
-                    support_type: activity.name,
-                    player_id: activity.player.id,
-                    player_name: activity.player.username,
-                    player_faction: activity.faction,
-                    tile_player: tileData?.p,
-                    tile_faction: tileData?.f,
-                    tile_soldiers: tileData?.s,
-                    raw_json_id: dataId
-                };
-                
-                newActivity.push(worldUpdate);
-                processedIds.push(dataId);
-
-                if (index % 1000 === 0) console.log(`${index}/${unprocessedMessages.length}`);
+            else if (data?.type === PlayerActivityType.INITIAL_ACTIVITIES) {
+                // With activity ids we can check if we missed anything after a restart.
+                const activityList = data.list as PlayerActivity[];
+                for (const activity of activityList) {
+                    newActivity.push({
+                        ...parseActivityLine(activity, undefined),
+                        raw_json_id: message.id
+                    });
+                }
+                processedIds.push(message.id);
+            }
+            else if (data?.activity?.id) {
+                // Process and add the normal activities
+                newActivity.push({
+                    ...parseActivityLine(data.activity, data.t),
+                    raw_json_id: message.id
+                });
+                processedIds.push(message.id);
             }
         }
 
@@ -127,7 +121,23 @@ export async function processWorldMessages(reprocess: boolean = false) {
         // Print out the error for now so the process keeps running.
         console.log(error);
     }
-    
+}
+
+function parseActivityLine(activity: PlayerActivity, tileData: any) {
+    // Upsert so we don't get an error on a race condition for the entry being created.
+    const worldUpdate: CreationAttributes<WorldUpdateModel> = {
+        ...activity,
+        ...activity.data,
+        support_type: activity.name,
+        player_id: activity.player.id,
+        player_name: activity.player.username,
+        player_faction: activity.faction,
+        tile_player: tileData?.p,
+        tile_faction: tileData?.f,
+        tile_soldiers: tileData?.s
+    };
+
+    return worldUpdate;
 }
 
 export async function readWorldMessagesFile(path: string) {

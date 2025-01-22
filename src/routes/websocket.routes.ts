@@ -3,6 +3,11 @@ import express, { Request, Response } from 'express';
 import { unwatchGame, watchGame } from '../controllers/factionsWebsocket.controller';
 import { processWorldMessages } from '../services/factionsWebsocket.service';
 
+// converts boolean strings to booleans
+function parseBoolean(string) {
+    return string === "true" ? true : string === "false" ? false : undefined;
+};
+
 const router = express.Router();
 
 router.post('/watch/:gameId', async (req: Request<{gameId: string }>, res: Response) => {
@@ -35,9 +40,10 @@ router.delete('/watch/:gameId', async (req: Request<{gameId: string }>, res: Res
     }
 });
 
-router.post('/parse', async (req: Request, res: Response) => {
+router.post('/parse', async (req: Request<{}, { reprocess: string}>, res: Response) => {
     try {
-        await processWorldMessages(true);
+        const reprocess = parseBoolean(req.query.reprocess)
+        await processWorldMessages(reprocess);
 
         res.status(204).send();
     } catch (error) {

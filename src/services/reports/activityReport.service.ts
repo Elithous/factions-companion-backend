@@ -14,6 +14,11 @@ export async function generateSoldierStats(filter?: WhereOptions) {
     const soldiersByFaction: { [sentFrom: string]: { [sentTo: string]: number }} = {}
 
     for (const entry of soldierData) {
+        // If the previous faction is null, that means all soldiers should be considered defense.
+        if (entry.previous_faction === null) {
+            entry.previous_faction = entry.player_faction;
+        }
+
         if (!soldiersByFaction[entry.player_faction]) {
             soldiersByFaction[entry.player_faction] = {};
         }
