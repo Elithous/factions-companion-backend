@@ -2,7 +2,7 @@ import fs from 'fs';
 import { RawJsonModel } from "../models/rawJson.model";
 import { WorldUpdateModel } from "../models/activities/worldUpdate.model";
 import { PlayerActivity, PlayerActivityType } from "../types/playerActivity.type";
-import { CreationAttributes, InferAttributes, Op, Sequelize } from 'sequelize';
+import { CreationAttributes } from 'sequelize';
 
 type QueueTypes = 'world_socket'
 
@@ -143,4 +143,19 @@ function parseActivityLine(activity: PlayerActivity, tileData: any) {
 export async function readWorldMessagesFile(path: string) {
     const file = fs.readFileSync(path).toString();
     file.split('\n').forEach(line => handleMessage('world_socket', JSON.parse(line)));
+}
+
+export async function parseActivityFile(path: string) {
+    const file = JSON.parse(fs.readFileSync(path).toString()) as any[];
+
+    const newActivity: CreationAttributes<WorldUpdateModel>[] = [];
+    for (const activity of file) {
+        newActivity.push({
+            ...parseActivityLine(activity, undefined),
+            raw_json_id: -1
+        });
+    }
+    WorldUpdateModel.bulkCreate(newActivity, {
+        updateOnDuplicate: ['id']
+    });
 }

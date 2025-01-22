@@ -1,9 +1,5 @@
 import express, { Express, Request, Response } from 'express';
-import { getHqInfo } from './controllers/api.controller';
-import { displayCosts } from './util/optimizer';
-import { showData } from './util/jank-parser';
 import { initDB } from './controllers/database.controller';
-import { processWorldMessages, readWorldMessagesFile } from './services/factionsWebsocket.service';
 import { getSetting, initSettings } from './services/settings.service';
 import routes from './routes';
 import { startWorldSocket } from './controllers/factionsWebsocket.controller';
