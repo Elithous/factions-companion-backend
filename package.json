@@ -1,4 +1,5 @@
 {
+  "name": "factions-viewer-backend",
   "type": "module",
   "scripts": {
     "start": "npx tsx src/app.ts",
