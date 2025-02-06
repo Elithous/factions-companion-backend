@@ -1,7 +1,7 @@
-import { Op, WhereOptions } from "sequelize";
+import { InferAttributes, WhereOptions } from "sequelize";
 import { WorldUpdateModel } from "../../models/activities/worldUpdate.model";
 
-export async function generateSoldierStats(filter?: WhereOptions) {
+export async function generateSoldierStats(filter?: WhereOptions<InferAttributes<WorldUpdateModel>>) {
     if (!filter) filter = {};
     const soldierData = await WorldUpdateModel.findAll({
         where: {

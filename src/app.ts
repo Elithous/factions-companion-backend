@@ -1,8 +1,10 @@
 import express, { Express, Request, Response } from 'express';
+import cors from 'cors';
 import { initDB } from './controllers/database.controller';
 import { getSetting, initSettings } from './services/settings.service';
 import routes from './routes';
 import { startWorldSocket } from './controllers/factionsWebsocket.controller';
+import config from './config/config';
 
 async function start() {
     await initDB();
@@ -20,8 +22,9 @@ async function start() {
 
     // Express setup
     const app: Express = express();
-    const port = 3000;
+    const port = config.PORT;
 
+    app.use(cors());
     app.use('/', routes);
 
     app.get('/', (req: Request, res: Response) => {

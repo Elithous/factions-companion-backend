@@ -14,14 +14,17 @@ services:
   server:
     build:
       context: .
+      dockerfile: Dockerfile
+      args:
+        - PORT=${PORT}
     environment:
       NODE_ENV: production
     ports:
-      - 3000:3000
+      - ${PORT}:${PORT}
     networks:
       - backend
     env_file:
-      - docker.env
+      - .env.docker
     depends_on:
       db:
         condition: service_healthy

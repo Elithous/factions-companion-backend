@@ -1,17 +1,34 @@
+import express, { Request, Response } from 'express';
 import { generateSoldierStats } from "../services/reports/activityReport.service";
+import { getAvailableGameIds } from '../services/reports/gameReport.service';
+import { WhereOptions, InferAttributes } from 'sequelize';
+import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
 
-export async function getSoldierStats() {
-    const stats = await generateSoldierStats();
-
-    // Format for copy/paste into excel for now
-    let excelString = '';
-    const froms = Object.keys(stats).sort();
-    for (const from of froms) {
-        const toValues = Object.entries(stats[from]).sort((a, b) => b[1] - a[1]);
-        for (const values of toValues) {
-            excelString += `${values[1]},${from},${values[0]}\n`;
+export async function getSoldierStats(req: Request, res: Response) {
+    try {
+        const { gameId, playerName, tileX, tileY } = req.query;
+        let whereQuery: WhereOptions<InferAttributes<WorldUpdateModel>> = {
+            game_id: gameId as string
+        };
+        if (playerName) {
+            whereQuery.player_name = playerName as string;
         }
-    }
+        if (tileX && tileY) {
+            whereQuery.x = tileX as string;
+            whereQuery.y = tileY as string;
+        }
+        const stats = await generateSoldierStats(whereQuery);
 
-    return excelString;
+        res.status(200).send(stats);
+    } catch (error) {
+        res.status(400).json({ message: `Error getting soldier data: ${error}` });
+    }
+}
+
+export async function getAvailableGames(req: Request, res: Response) {
+    try {
+        res.status(200).send(await getAvailableGameIds());
+    } catch (error) {
+        res.status(400).json({ message: `Error setting up game watch: ${error}` });
+    }
 }

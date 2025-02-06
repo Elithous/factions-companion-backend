@@ -31,8 +31,9 @@ USER node
 # Copy the rest of the source files into the image.
 COPY . .
 
+ARG PORT
 # Expose the port that the application listens on.
-EXPOSE 3000
+EXPOSE ${PORT}
 
 # Run the application.
 CMD npm start
