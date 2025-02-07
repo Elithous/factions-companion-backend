@@ -3,9 +3,8 @@ import cors from 'cors';
 import { initDB } from './controllers/database.controller';
 import { getSetting, initSettings } from './services/settings.service';
 import routes from './routes';
-import { startWorldSocket } from './controllers/factionsWebsocket.controller';
+import { watchGame } from './controllers/factionsWebsocket.controller';
 import config from './config/config';
-import { saveAllCaseData } from './services/activities.service';
 
 async function start() {
     await initDB();
@@ -15,7 +14,7 @@ async function start() {
     // Watch websockets and process the information
     getSetting('socket').then(setting => {
         if (setting?.watchList) {
-            setting.watchList.forEach(value => startWorldSocket(value));
+            setting.watchList.forEach(value => watchGame(value));
         }
     });
     // Get current game settings to allow cost calcs
