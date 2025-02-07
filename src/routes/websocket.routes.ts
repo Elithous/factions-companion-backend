@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 
-import { unwatchGame, watchGame } from '../controllers/factionsWebsocket.controller';
+import { unsetWatchGame, setWatchGame } from '../controllers/factionsWebsocket.controller';
 import { processWorldMessages } from '../services/factionsWebsocket.service';
 
 // converts boolean strings to booleans
@@ -17,7 +17,7 @@ router.post('/watch/:gameId', async (req: Request<{gameId: string }>, res: Respo
             throw new Error('Game ID not supplied.');
         }
         // TODO: Add validation and check if we are already watching this game.
-        await watchGame(gameId);
+        await setWatchGame(gameId);
 
         res.status(204).send();
     } catch (error) {
@@ -32,7 +32,7 @@ router.delete('/watch/:gameId', async (req: Request<{gameId: string }>, res: Res
             throw new Error('Game ID not supplied.');
         }
         // TODO: Add validation and check if we are already watching this game.
-        await unwatchGame(gameId);
+        await unsetWatchGame(gameId);
 
         res.status(204).send();
     } catch (error) {

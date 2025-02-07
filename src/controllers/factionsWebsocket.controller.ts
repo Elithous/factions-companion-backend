@@ -4,6 +4,7 @@ import fs from 'fs';
 import { PlayerActivity } from "../types/playerActivity.type";
 import { handleMessage } from "../services/factionsWebsocket.service";
 import { getSetting, setSetting } from "../services/settings.service";
+import { saveAllCaseData } from "../services/activities.service";
 
 const worldSockets: { [gameId: string]: ReconnectingWebSocket } = {};
 const factionSocket: { [gameId: string]: ReconnectingWebSocket } = {};
@@ -31,18 +32,18 @@ export async function startWorldSocket(gameId: string) {
         });
 
         worldSockets[gameId] = ws;
-        
+
         ws.addEventListener('error', (event) => {
-          console.log(event);
+            console.log(event);
         });
-        
+
         ws.addEventListener('message', (event) => {
-          const json = JSON.parse(event.data);
-    
-          const message = JSON.stringify(json);
-          console.log(`Received message from server: ${message}`);
-    
-          handleMessage('world_socket', json);
+            const json = JSON.parse(event.data);
+
+            const message = JSON.stringify(json);
+            console.log(`Received message from server: ${message}`);
+
+            handleMessage('world_socket', json);
         });
     }
 }
@@ -57,16 +58,22 @@ export async function stopWorldSocket(gameId: string) {
 }
 
 export async function watchGame(gameId: string) {
-    const socketSetting = await getSetting('socket');
-    socketSetting.watchList.push(gameId);
-    setSetting('socket', socketSetting);
-    
+    saveAllCaseData(gameId);
+
     await startWorldSocket(gameId);
     console.log(`Watching game ${gameId}`);
     // TODO: Also watch worker queue, leaderboard?, chat?
 }
 
-export async function unwatchGame(gameId: string) {
+export async function setWatchGame(gameId: string) {
+    const socketSetting = await getSetting('socket');
+    socketSetting.watchList.push(gameId);
+    setSetting('socket', socketSetting);
+
+    watchGame(gameId);
+}
+
+export async function unsetWatchGame(gameId: string) {
     const socketSetting = await getSetting('socket');
     socketSetting.watchList = socketSetting.watchList.filter(id => id !== gameId);
     setSetting('socket', socketSetting);

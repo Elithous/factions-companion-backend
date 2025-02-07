@@ -5,6 +5,7 @@ import { getSetting, initSettings } from './services/settings.service';
 import routes from './routes';
 import { startWorldSocket } from './controllers/factionsWebsocket.controller';
 import config from './config/config';
+import { saveAllCaseData } from './services/activities.service';
 
 async function start() {
     await initDB();

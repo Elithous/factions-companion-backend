@@ -123,7 +123,7 @@ export async function processWorldMessages(reprocess: boolean = false) {
     }
 }
 
-function parseActivityLine(activity: PlayerActivity, tileData: any) {
+export function parseActivityLine(activity: PlayerActivity, tileData: any) {
     // Upsert so we don't get an error on a race condition for the entry being created.
     const worldUpdate: CreationAttributes<WorldUpdateModel> = {
         ...activity,
