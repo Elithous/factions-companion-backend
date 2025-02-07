@@ -1,9 +1,10 @@
 import express, { Request, Response } from 'express';
-import { getSoldierStats, getAvailableGames } from '../controllers/reports.controller';
+import { getSoldierStatsByFaction, getAvailableGames, getSoliderStatsByTile } from '../controllers/reports.controller';
 
 const router = express.Router();
 
-router.get('/soldiers', getSoldierStats);
+router.get('/soldiers/faction', getSoldierStatsByFaction);
+router.get('/soldiers/tile', getSoliderStatsByTile);
 
 router.get('/games', getAvailableGames);
 
