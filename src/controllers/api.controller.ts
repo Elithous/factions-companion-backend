@@ -1,25 +1,39 @@
-import { HqInfo } from "../types/hqInfo.type";
+import { HqConfigModel, HqEffectsModel, HqInfoModel } from "../types/apiResponses/hq.type";
 import { PlayerActivity } from "../types/playerActivity.type";
 
-export type Endpoint = 'get_hq_info' | 'get_leaderboard' | 'get_projects' | 'get_old_projects' | 'get_case_data';
 const baseUrl = process.env.API_BASE_URL;
+const endpointMap = {
+    get_hq_info: { url: `${baseUrl}game/{gameId}/hq/info`, returnType: {} as HqInfoModel },
+    get_hq_effects: { url: `${baseUrl}game/{gameId}/hq/effects`, returnType: {} as HqEffectsModel },
+    get_hq_config: { url: `${baseUrl}game/{gameId}/hq/info`, returnType: {} as HqConfigModel },
+    get_leaderboard: { url: `${baseUrl}game/{gameId}/leaderboard`, returnType: {} as any },
+    get_projects: { url: `${baseUrl}game/{gameId}/projects/list`, returnType: {} as any },
+    get_old_projects: { url: `${baseUrl}game/{gameId}/projects/old`, returnType: {} as any },
+    get_case_data: { url: `${baseUrl}game/{gameId}/activities/case`, returnType: [] as PlayerActivity[] }
+}
 
-export async function apiFetch(
-    endpoint: Endpoint,
+export type Endpoint = keyof typeof endpointMap;
+type EndpointReturnType<E extends Endpoint> = typeof endpointMap[E]['returnType'];
+
+export async function apiFetch<E extends Endpoint>(
+    endpoint: E,
     gameId: string,
     options?: {
         options?: RequestInit,
         queryParams?: Record<string, string>
     }
-): Promise<any> {
-    const endpointMap: { [key in Endpoint]: string } = {
-        get_hq_info: `${baseUrl}hq/info`,
-        get_leaderboard: `${baseUrl}game/${gameId}/leaderboard`,
-        get_projects: `${baseUrl}game/${gameId}/projects/list`,
-        get_old_projects: `${baseUrl}game/${gameId}/projects/old`,
-        get_case_data: `${baseUrl}game/${gameId}/activities/case`
-    }
-    let url = endpointMap[endpoint];
+): Promise<EndpointReturnType<typeof endpoint>> {
+    let url = endpointMap[endpoint].url;
+
+    // Replace string substitutions
+    const replacements = { gameId };
+    url = url.replace( // https://stackoverflow.com/a/61634647
+        /{(\w+)}/g,
+        (placeholderWithDelimiters, placeholderWithoutDelimiters) =>
+            replacements.hasOwnProperty(placeholderWithoutDelimiters) ?
+                replacements[placeholderWithoutDelimiters] : placeholderWithDelimiters
+    );
+
     if (options?.queryParams) {
         url += '?' + new URLSearchParams(options.queryParams).toString();
     }
@@ -44,5 +58,5 @@ export async function apiFetch(
 
 export async function getCaseData(gameId: string, x: number, y: number) {
     const params = { x: x.toString(), y: y.toString() };
-    return apiFetch('get_case_data', gameId, { queryParams: params }) as Promise<PlayerActivity[]>;
+    return apiFetch('get_case_data', gameId, { queryParams: params });
 }
