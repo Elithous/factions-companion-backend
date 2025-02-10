@@ -6,7 +6,7 @@ import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
 
 export async function getSoldierStatsByFaction(req: Request, res: Response) {
     try {
-        const { gameId, playerName, tileX, tileY } = req.query;
+        const { gameId, playerName, tileX, tileY, fromFaction } = req.query;
         let whereQuery: WhereOptions<InferAttributes<WorldUpdateModel>> = {
             game_id: gameId as string
         };
@@ -16,6 +16,9 @@ export async function getSoldierStatsByFaction(req: Request, res: Response) {
         if (tileX && tileY) {
             whereQuery.x = tileX as string;
             whereQuery.y = tileY as string;
+        }
+        if (fromFaction) {
+            whereQuery.player_faction = fromFaction as string;
         }
         const stats = await generateSoldierStatsByFaction(whereQuery);
 
@@ -27,12 +30,15 @@ export async function getSoldierStatsByFaction(req: Request, res: Response) {
 
 export async function getSoliderStatsByTile(req: Request, res: Response) {
     try {
-        const { gameId, playerName } = req.query;
+        const { gameId, playerName, fromFaction } = req.query;
         let whereQuery: WhereOptions<InferAttributes<WorldUpdateModel>> = {
             game_id: gameId as string
         };
         if (playerName) {
             whereQuery.player_name = playerName as string;
+        }
+        if (fromFaction) {
+            whereQuery.player_faction = fromFaction as string;
         }
         const stats = await generateSoldierStatsByTile(whereQuery);
 
