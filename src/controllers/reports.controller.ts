@@ -3,6 +3,7 @@ import { generateSoldierStatsByFaction, generateSoldierStatsByTile } from "../se
 import { getAvailableGameIds } from '../services/reports/gameReport.service';
 import { WhereOptions, InferAttributes } from 'sequelize';
 import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
+import { generatePlayerMvpLeaderboard } from '../services/reports/leaderboardReport.service';
 
 export async function getSoldierStatsByFaction(req: Request, res: Response) {
     try {
@@ -43,6 +44,23 @@ export async function getSoliderStatsByTile(req: Request, res: Response) {
         const stats = await generateSoldierStatsByTile(whereQuery);
 
         res.status(200).send(stats);
+    } catch (error) {
+        res.status(400).json({ message: `Error getting soldier data: ${error}` });
+    }
+}
+
+export async function getPlayerMvpLeaderboard(req: Request, res: Response) {
+    try {
+        const { gameId } = req.query;
+
+        const stats = await generatePlayerMvpLeaderboard(gameId as string);
+
+        let output = '';
+        stats.forEach((stat, index) => {
+            output += `${index + 1}:${stat.name}(${stat.faction.substring(0, 1)}) - ${stat.score}\r\n`;
+        });
+
+        res.status(200).send(output);
     } catch (error) {
         res.status(400).json({ message: `Error getting soldier data: ${error}` });
     }

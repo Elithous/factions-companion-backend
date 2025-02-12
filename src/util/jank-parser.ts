@@ -2,14 +2,7 @@ import { FactionColor } from "../types/faction.type";
 import { apiFetch } from "../controllers/api.controller";
 
 async function parseLeaderboard(gameId: string) {
-    const rawJson: {
-        name: string,
-        faction: FactionColor,
-        hqLevel: number,
-        sentSoldier: number,
-        sentWorkers: number,
-        casesCaptured: number
-    }[] = await apiFetch('get_leaderboard', gameId);
+    const rawJson = await apiFetch('get_leaderboard', gameId);
 
     let leaderboard: {
         [faction in FactionColor]: number
