@@ -10,3 +10,18 @@ export async function getAvailableGameIds() {
 
     return gameIds;
 }
+
+export async function getTimespan(gameId: string) {
+    const minTime = await WorldUpdateModel.min('created_at', {
+        where: {
+            game_id: gameId
+        }
+    });
+    const maxTime = await WorldUpdateModel.max('created_at', {
+        where: {
+            game_id: gameId
+        }
+    });
+
+    return [minTime, maxTime];
+}

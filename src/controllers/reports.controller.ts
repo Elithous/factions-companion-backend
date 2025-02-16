@@ -1,13 +1,13 @@
 import express, { Request, Response } from 'express';
 import { generateSoldierStatsByFaction, generateSoldierStatsByTile } from "../services/reports/activityReport.service";
-import { getAvailableGameIds } from '../services/reports/gameReport.service';
-import { WhereOptions, InferAttributes } from 'sequelize';
+import { getAvailableGameIds, getTimespan } from '../services/reports/gameReport.service';
+import { WhereOptions, InferAttributes, WhereAttributeHashValue, Op } from 'sequelize';
 import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
 import { generatePlayerMvpLeaderboard } from '../services/reports/leaderboardReport.service';
 
 export async function getSoldierStatsByFaction(req: Request, res: Response) {
     try {
-        const { gameId, playerName, tileX, tileY, fromFaction } = req.query;
+        const { gameId, playerName, tileX, tileY, fromFaction, dateStart, dateEnd } = req.query;
         let whereQuery: WhereOptions<InferAttributes<WorldUpdateModel>> = {
             game_id: gameId as string
         };
@@ -21,6 +21,18 @@ export async function getSoldierStatsByFaction(req: Request, res: Response) {
         if (fromFaction) {
             whereQuery.player_faction = fromFaction as string;
         }
+
+        const createdQuery: WhereAttributeHashValue<number> = {}
+        if (parseFloat(dateStart as string)) {
+            createdQuery[Op.gte] = parseFloat(dateStart as string);
+        }
+        if (parseFloat(dateEnd as string)) {
+            createdQuery[Op.lte] = parseFloat(dateEnd as string);
+        }
+        if (createdQuery[Op.gte] || createdQuery[Op.lte]) {
+            whereQuery.created_at = createdQuery;
+        }
+
         const stats = await generateSoldierStatsByFaction(whereQuery);
 
         res.status(200).send(stats);
@@ -31,7 +43,7 @@ export async function getSoldierStatsByFaction(req: Request, res: Response) {
 
 export async function getSoliderStatsByTile(req: Request, res: Response) {
     try {
-        const { gameId, playerName, fromFaction } = req.query;
+        const { gameId, playerName, fromFaction, dateStart, dateEnd } = req.query;
         let whereQuery: WhereOptions<InferAttributes<WorldUpdateModel>> = {
             game_id: gameId as string
         };
@@ -41,6 +53,17 @@ export async function getSoliderStatsByTile(req: Request, res: Response) {
         if (fromFaction) {
             whereQuery.player_faction = fromFaction as string;
         }
+        const createdQuery: WhereAttributeHashValue<number> = {}
+        if (parseFloat(dateStart as string)) {
+            createdQuery[Op.gte] = parseFloat(dateStart as string);
+        }
+        if (parseFloat(dateEnd as string)) {
+            createdQuery[Op.lte] = parseFloat(dateEnd as string);
+        }
+        if (createdQuery[Op.gte] || createdQuery[Op.lte]) {
+            whereQuery.created_at = createdQuery;
+        }
+
         const stats = await generateSoldierStatsByTile(whereQuery);
 
         res.status(200).send(stats);
@@ -69,6 +92,16 @@ export async function getPlayerMvpLeaderboard(req: Request, res: Response) {
 export async function getAvailableGames(req: Request, res: Response) {
     try {
         res.status(200).send(await getAvailableGameIds());
+    } catch (error) {
+        res.status(400).json({ message: `Error setting up game watch: ${error}` });
+    }
+}
+
+export async function getGameTimespan(req: Request, res: Response) {
+    try {
+        const { gameId } = req.query;
+
+        res.status(200).send(await getTimespan(gameId as string));
     } catch (error) {
         res.status(400).json({ message: `Error setting up game watch: ${error}` });
     }
