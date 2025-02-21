@@ -6,7 +6,7 @@ const baseUrl = process.env.API_BASE_URL;
 const endpointMap = {
     get_hq_info: { url: `${baseUrl}game/{gameId}/hq/info`, returnType: {} as HqInfoModel },
     get_hq_effects: { url: `${baseUrl}game/{gameId}/hq/effects`, returnType: {} as HqEffectsModel },
-    get_hq_config: { url: `${baseUrl}game/{gameId}/hq/info`, returnType: {} as HqConfigModel },
+    get_hq_config: { url: `${baseUrl}game/{gameId}/hq/config`, returnType: {} as HqConfigModel },
     get_leaderboard: { url: `${baseUrl}game/{gameId}/leaderboard`, returnType: {} as Leaderboard },
     get_projects: { url: `${baseUrl}game/{gameId}/projects/list`, returnType: {} as any },
     get_old_projects: { url: `${baseUrl}game/{gameId}/projects/old`, returnType: {} as any },

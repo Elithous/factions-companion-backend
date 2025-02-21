@@ -71,7 +71,7 @@ export interface HqConfigModel {
         [faction in FactionColor]: {
             [coord: string]: number
         }
-    }
+    } | null,
     mapConfig?: {
         author: string,
         description: string,
@@ -86,13 +86,8 @@ export interface HqConfigModel {
         terrain_bonus: {
             [name: string]: EffectDetail[]
         }
-    },
+    } | null,
     misc: {
-        allowedFortification: (string | null)[],
-        allowedImprovement: (string | null)[],
-        fortificationTileLevels: number[],
-        improvementTileLevels: number[],
-        minNumberOfVotes: number,
         parameters: {
             building_iron_cost_multiplier: number,
             building_wood_cost_multiplier: number,
@@ -102,20 +97,26 @@ export interface HqConfigModel {
             hq_worker_cost_multiplier: number
         },
         tileImprovementBonus: number
+        fortificationTileLevels: number[],
+        improvementTileLevels: number[],
+        allowedFortification: (string | null)[],
+        allowedImprovement: (string | null)[],
+        minNumberOfVotes: number,
     },
     modeConfig: {
-        base_project_cost: number,
-        castle_capture_duration: number,
-        estimated_duration: number,
-        leaders: boolean,
-        politic_system: boolean,
-        project_duration: number,
-        resource_multiplier: number,
-        sleep_mode: boolean,
-        storage_multiplier: number,
         tick_duration: number,
+        vp_objective: number,
+        castle_capture_duration: number,
+        sleep_mode: boolean,
+        politic_system: boolean,
+        leaders: boolean,
+        resource_multiplier: number,
+        storage_multiplier: number,
+        project_duration: number,
         tutorial: boolean,
-        vp_objective: number
+        estimated_duration: number,
+        event_duration_multiplier: number,
+        base_project_cost: number,
     },
-    world: string[][]
+    world: string[][] | null
 }

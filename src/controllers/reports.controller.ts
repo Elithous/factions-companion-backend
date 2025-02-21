@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { generateSoldierStatsByFaction, generateSoldierStatsByTile } from "../services/reports/activityReport.service";
-import { getAvailableGameIds, getTimespan } from '../services/reports/gameReport.service';
+import { getAvailableGameIds, getConfig, getTimespan } from '../services/reports/gameReport.service';
 import { WhereOptions, InferAttributes, WhereAttributeHashValue, Op } from 'sequelize';
 import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
 import { generatePlayerMvpLeaderboard } from '../services/reports/leaderboardReport.service';
@@ -93,7 +93,7 @@ export async function getAvailableGames(req: Request, res: Response) {
     try {
         res.status(200).send(await getAvailableGameIds());
     } catch (error) {
-        res.status(400).json({ message: `Error setting up game watch: ${error}` });
+        res.status(400).json({ message: `Error: ${error}` });
     }
 }
 
@@ -103,6 +103,16 @@ export async function getGameTimespan(req: Request, res: Response) {
 
         res.status(200).send(await getTimespan(gameId as string));
     } catch (error) {
-        res.status(400).json({ message: `Error setting up game watch: ${error}` });
+        res.status(400).json({ message: `Error: ${error}` });
+    }
+}
+
+export async function getGameConfig(req: Request, res: Response) {
+    try {
+        const { gameId } = req.query;
+
+        res.status(200).send(await getConfig(gameId as string));
+    } catch (error) {
+        res.status(400).json({ message: `Error: ${error}` });
     }
 }

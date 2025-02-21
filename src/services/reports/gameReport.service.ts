@@ -1,3 +1,4 @@
+import { apiFetch } from "../../controllers/api.controller";
 import { WorldUpdateModel } from "../../models/activities/worldUpdate.model";
 
 export async function getAvailableGameIds() {
@@ -24,4 +25,8 @@ export async function getTimespan(gameId: string) {
     });
 
     return [minTime, maxTime];
+}
+
+export async function getConfig(gameId: string) {
+    return apiFetch('get_hq_config', gameId);
 }
