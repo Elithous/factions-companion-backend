@@ -1,16 +1,17 @@
 import { Sequelize } from "sequelize";
 import config from '../config/config';
-import factionsConfig from '../config/factions.config';
 import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
 import { RawJsonModel } from '../models/rawJson.model';
 import { SettingsModel } from "../models/setting.model";
+import { GameConfigModel } from "../models/config.model";
 
 export let sequelize: Sequelize;
 
 const models = [
     WorldUpdateModel,
     RawJsonModel,
-    SettingsModel
+    SettingsModel,
+    GameConfigModel
 ];
 
 export async function initDB() {
