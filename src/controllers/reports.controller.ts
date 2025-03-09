@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { generateSoldierStatsByFaction, generateSoldierStatsByTile } from "../services/reports/activityReport.service";
+import { generateSoldierStatsByFaction, generateSoldierStatsByTile, getAllActivities } from "../services/reports/activityReport.service";
 import { getAvailableGameIds, getConfig, getTimespan } from '../services/reports/gameReport.service';
 import { WhereOptions, InferAttributes, WhereAttributeHashValue, Op } from 'sequelize';
 import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
@@ -112,6 +112,18 @@ export async function getGameConfig(req: Request, res: Response) {
         const { gameId } = req.query;
 
         res.status(200).send(await getConfig(gameId as string));
+    } catch (error) {
+        res.status(400).json({ message: `Error: ${error}` });
+    }
+}
+
+export async function allActivities(req: Request, res: Response) {
+    try {
+        const { gameId } = req.query;
+        let whereQuery: WhereOptions<InferAttributes<WorldUpdateModel>> = {
+            game_id: gameId as string
+        };
+        res.status(200).send(await getAllActivities(whereQuery));
     } catch (error) {
         res.status(400).json({ message: `Error: ${error}` });
     }

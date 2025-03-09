@@ -65,3 +65,11 @@ export async function generateSoldierStatsByTile(filter?: WhereOptions<InferAttr
 
     return soldiersByTile;
 }
+
+export async function getAllActivities(filter?: WhereOptions<InferAttributes<WorldUpdateModel>>) {
+    return await WorldUpdateModel.findAll({
+        where: {
+            ...filter
+        }
+    });
+}
