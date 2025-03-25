@@ -3,7 +3,7 @@ import { generateSoldierStatsByFaction, generateSoldierStatsByTile, getAllActivi
 import { getAvailableGameIds, getConfig, getTimespan } from '../services/reports/gameReport.service';
 import { WhereOptions, InferAttributes, WhereAttributeHashValue, Op } from 'sequelize';
 import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
-import { generatePlayerMvpLeaderboard } from '../services/reports/leaderboardReport.service';
+import { generateApmLeaderboard, generatePlayerMvpLeaderboard, generateTileLeaderboard } from '../services/reports/leaderboardReport.service';
 
 export async function getSoldierStatsByFaction(req: Request, res: Response) {
     try {
@@ -88,6 +88,80 @@ export async function getPlayerMvpLeaderboard(req: Request, res: Response) {
         res.status(400).json({ message: `Error getting soldier data: ${error}` });
     }
 }
+
+export async function getPlayerApmLeaderboard(req: Request, res: Response) {
+    try {
+        const { gameId, timespan } = req.query;
+        const contentType = req.headers['accept'] || 'text/html';
+
+        const timespanNum = parseInt(timespan as string) || 60;
+
+        const stats = await generateApmLeaderboard(gameId as string, timespanNum);
+
+        // Check if client wants JSON
+        if (contentType.includes('application/json')) {
+            res.status(200).json(stats);
+        } else {
+            // Default to HTML response
+            let output = '<h2>APM Leaderboard</h2>';
+            output += `<p>(Rolling ${timespanNum} second window)</p>`;
+            output += '<style>';
+            output += 'table { border-collapse: collapse; width: 100%; }';
+            output += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
+            output += 'th { background-color: #f2f2f2; }';
+            output += 'tr:nth-child(even) { background-color: #f9f9f9; }';
+            output += 'tr:hover { background-color: #f1f1f1; }';
+            output += '</style>';
+            output += '<table>';
+            output += '<tr><th>Rank</th><th>Player</th><th>APM</th></tr>';
+            stats.forEach((stat, index) => {
+                output += `<tr><td>${index + 1}</td><td>${stat[0]}</td><td>${stat[1]}</td></tr>`;
+            });
+            output += '</table>';
+
+            res.status(200).send(output);
+        }
+    } catch (error) {
+        res.status(400).json({ message: `Error getting apm data: ${error}` });
+    }
+}
+
+export async function getTileLeaderboard(req: Request, res: Response) {
+    try {
+        const { gameId } = req.query;
+        const contentType = req.headers['accept'] || 'text/html';
+
+        const stats = await generateTileLeaderboard(gameId as string);
+
+        // Check if client wants JSON
+        if (contentType.includes('application/json')) {
+            res.status(200).json(stats);
+        } else {
+            // Default to HTML response
+            let output = '<h2>Tile Ownership Leaderboard</h2>';
+            output += '<p>(Maximum concurrent tiles captured by the player)</p>';
+            output += '<style>';
+            output += 'table { border-collapse: collapse; width: 100%; }';
+            output += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
+            output += 'th { background-color: #f2f2f2; }';
+            output += 'tr:nth-child(even) { background-color: #f9f9f9; }';
+            output += 'tr:hover { background-color: #f1f1f1; }';
+            output += '</style>';
+            output += '<table>';
+            output += '<tr><th>Rank</th><th>Player</th><th>Tiles Captured</th><th>Percentage</th></tr>';
+            stats.forEach((stat, index) => {
+                output += `<tr><td>${index + 1}</td><td>${stat[0]}</td><td>${stat[1]}</td><td>${stat[2]}</td></tr>`;
+            });
+            output += '</table>';
+
+            res.status(200).send(output);
+        }
+    } catch (error) {
+        res.status(400).json({ message: `Error getting tile data: ${error}` });
+    }
+}
+
+
 
 export async function getAvailableGames(req: Request, res: Response) {
     try {
