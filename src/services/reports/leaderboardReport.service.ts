@@ -1,7 +1,15 @@
 import { apiFetch } from "../../controllers/api.controller";
 import { WorldUpdateModel } from "../../models/activities/worldUpdate.model";
+import { cacheReport, getCachedReport, ReportType } from "./reportCache.service";
 
 export async function generatePlayerMvpLeaderboard(gameId: string) {
+    // Check cache first
+    const cachedData = await getCachedReport(gameId, ReportType.PLAYER_MVP);
+    if (cachedData) {
+        return cachedData;
+    }
+
+    // If no cache, generate the report
     const board = await apiFetch('get_leaderboard', gameId);
 
     const solderScoreMulti = +gameId <= 22 ? 2 : 1.8;
@@ -18,10 +26,22 @@ export async function generatePlayerMvpLeaderboard(gameId: string) {
     });
     scores.sort((a, b) => b.score - a.score);
 
+    // Cache the results
+    await cacheReport(gameId, ReportType.PLAYER_MVP, scores);
+
     return scores;
 }
 
 export async function generateApmLeaderboard(gameId: string, timespan: number) {
+    // Parameter to differentiate different timespan values
+    const params = { timespan };
+
+    // Check cache first
+    const cachedData = await getCachedReport(gameId, ReportType.APM, params);
+    if (cachedData) {
+        return cachedData;
+    }
+
     const allActions = await WorldUpdateModel.findAll({
         attributes: {
             include: ['updated_at', 'player_name']
@@ -65,10 +85,19 @@ export async function generateApmLeaderboard(gameId: string, timespan: number) {
 
     const sortedLeaderboard = Object.entries(leaderboard).sort((a, b) => b[1] - a[1]);
 
+    // Cache the results with parameters
+    await cacheReport(gameId, ReportType.APM, sortedLeaderboard, params);
+
     return sortedLeaderboard;
 }
 
 export async function generateTileLeaderboard(gameId: string) {
+    // Check cache first
+    const cachedData = await getCachedReport(gameId, ReportType.TILE);
+    if (cachedData) {
+        return cachedData;
+    }
+
     const allTileUpdates = await WorldUpdateModel.findAll({
         attributes: ['player_name', 'updated_at', 'x', 'y', 'captured'],
         where: {
@@ -125,6 +154,9 @@ export async function generateTileLeaderboard(gameId: string) {
         const percentage = totalDistinctTiles > 0 ? ((count as number) / totalDistinctTiles * 100).toFixed(1) : '0.0';
         return [player, count, `${percentage}%`];
     });
+
+    // Cache the results
+    await cacheReport(gameId, ReportType.TILE, leaderboardWithPercentage);
 
     return leaderboardWithPercentage;
 }

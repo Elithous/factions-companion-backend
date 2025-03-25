@@ -4,6 +4,7 @@ import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
 import { RawJsonModel } from '../models/rawJson.model';
 import { SettingsModel } from "../models/setting.model";
 import { GameConfigModel } from "../models/config.model";
+import ReportCacheModel from "../models/reportCache.model";
 
 export let sequelize: Sequelize;
 
@@ -11,7 +12,8 @@ const models = [
     WorldUpdateModel,
     RawJsonModel,
     SettingsModel,
-    GameConfigModel
+    GameConfigModel,
+    ReportCacheModel
 ];
 
 export async function initDB() {
