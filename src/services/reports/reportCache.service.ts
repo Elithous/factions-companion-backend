@@ -43,12 +43,8 @@ export async function getCachedReport(
         return null;
     }
 
-    // Check if game is in watchlist
-    const socketSettings = await getSetting('socket');
-    const isWatched = gameId && socketSettings?.watchList?.includes(gameId);
-
-    // If game is watched, cache never expires, or cache is not expired, return the data
-    if (isWatched || cacheEntry.revalidate_at === null || new Date(cacheEntry.revalidate_at) > now) {
+    // If cache never expires, or cache is not expired, return the data
+    if (cacheEntry.revalidate_at === null || new Date(cacheEntry.revalidate_at) > now) {
         return cacheEntry.data;
     }
 
@@ -77,9 +73,9 @@ export async function cacheReport(
     const socketSettings = await getSetting('socket');
     const isWatched = gameId && socketSettings?.watchList?.includes(gameId);
 
-    // If game is watched, set revalidate_at to null (never expire)
+    // If game is not watched, set revalidate_at to null (never expire)
     // Otherwise, set it to now + cacheDuration
-    const revalidateAt = isWatched ? null : new Date(now.getTime() + cacheDuration);
+    const revalidateAt = !isWatched ? null : new Date(now.getTime() + cacheDuration);
 
     // Upsert the cache entry
     await ReportCacheModel.upsert({
@@ -106,21 +102,15 @@ export async function hasValidCache(
     const now = new Date();
     const paramString = JSON.stringify(params);
 
-    // Check if game is in watchlist
-    const socketSettings = await getSetting('socket');
-    const isWatched = gameId && socketSettings?.watchList?.includes(gameId);
-
     // Find cache entry
     const count = await ReportCacheModel.count({
         where: {
             game_id: gameId || '',
             report_type: reportType,
             parameters: paramString,
-            ...(isWatched ? {} : {
-                revalidate_at: {
-                    [Op.gt]: now
-                }
-            })
+            revalidate_at: {
+                [Op.gt]: now
+            }
         }
     });
 
