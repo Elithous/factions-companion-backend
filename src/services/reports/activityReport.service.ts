@@ -50,7 +50,8 @@ export async function generateSoldierStatsByFaction(filter?: WhereOptions<InferA
     }
 
     // Cache the results
-    await cacheReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_FACTION, cacheFilter);
+    const cacheDuration = 1000 * 5 * 60; // 5 minutes
+    await cacheReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_FACTION, soldiersByFaction, cacheFilter, cacheDuration);
 
     return soldiersByFaction;
 }
@@ -86,7 +87,8 @@ export async function generateSoldierStatsByTile(filter?: WhereOptions<InferAttr
     }
 
     // Cache the results
-    await cacheReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_TILE, cacheFilter);
+    const cacheDuration = 1000 * 5 * 60; // 5 minutes
+    await cacheReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_TILE, soldiersByTile, cacheFilter, cacheDuration);
 
     return soldiersByTile;
 }
