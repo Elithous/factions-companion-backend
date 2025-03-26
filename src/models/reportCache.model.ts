@@ -7,7 +7,7 @@ export class ReportCacheModel extends BaseModel<InferAttributes<ReportCacheModel
     declare parameters: string;
     declare data: any;
     declare created_at: string | Date;
-    declare revalidate_at: string | Date;
+    declare revalidate_at: string | Date | null;
 
     static modelAttributes(): ModelAttributes {
         return {
@@ -35,7 +35,7 @@ export class ReportCacheModel extends BaseModel<InferAttributes<ReportCacheModel
             },
             revalidate_at: {
                 type: DataTypes.DATE,
-                allowNull: false
+                allowNull: true
             }
         }
     }

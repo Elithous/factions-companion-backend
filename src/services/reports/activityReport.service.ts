@@ -1,8 +1,18 @@
 import { InferAttributes, WhereOptions } from "sequelize";
 import { WorldUpdateModel } from "../../models/activities/worldUpdate.model";
+import { cacheReport, getCachedReport, ReportType } from "./reportCache.service";
 
 export async function generateSoldierStatsByFaction(filter?: WhereOptions<InferAttributes<WorldUpdateModel>>) {
     if (!filter) filter = {};
+
+    const cacheFilter = { ...filter } as InferAttributes<WorldUpdateModel>;
+
+    // Check cache first if game ID exists in filter
+    const cachedData = await getCachedReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_FACTION, cacheFilter);
+    if (cachedData) {
+        return cachedData;
+    }
+
     const soldierData = await WorldUpdateModel.findAll({
         where: {
             ...filter,
@@ -39,11 +49,23 @@ export async function generateSoldierStatsByFaction(filter?: WhereOptions<InferA
         soldiersByFaction[entry.player_faction][entry.previous_faction] += entry.amount;
     }
 
+    // Cache the results
+    await cacheReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_FACTION, cacheFilter);
+
     return soldiersByFaction;
 }
 
 export async function generateSoldierStatsByTile(filter?: WhereOptions<InferAttributes<WorldUpdateModel>>) {
     if (!filter) filter = {};
+
+    const cacheFilter = { ...filter } as InferAttributes<WorldUpdateModel>;
+
+    // Check cache first if game ID exists in filter
+    const cachedData = await getCachedReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_FACTION, cacheFilter);
+    if (cachedData) {
+        return cachedData;
+    }
+
     const soldierData = await WorldUpdateModel.findAll({
         where: {
             ...filter,
@@ -62,6 +84,9 @@ export async function generateSoldierStatsByTile(filter?: WhereOptions<InferAttr
         }
         soldiersByTile[entry.x][entry.y] += entry.amount;
     }
+
+    // Cache the results
+    await cacheReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_TILE, cacheFilter);
 
     return soldiersByTile;
 }
