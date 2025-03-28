@@ -98,11 +98,11 @@ export async function getPlayerApmLeaderboard(req: Request, res: Response) {
         let timespans: number[] = [];
         if (typeof timespan === 'string') {
             timespans = timespan.split(',')
-                .map(t => parseInt(t.trim()))
+                .map(t => parseFloat(t.trim()))
                 .filter(t => !isNaN(t));
         } else if (Array.isArray(timespan)) {
             timespans = timespan
-                .map(t => parseInt(String(t).trim()))
+                .map(t => parseFloat(String(t).trim()))
                 .filter(t => !isNaN(t));
         }
 

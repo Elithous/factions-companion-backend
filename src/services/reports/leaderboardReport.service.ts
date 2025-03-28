@@ -32,9 +32,9 @@ export async function generatePlayerMvpLeaderboard(gameId: string) {
     return scores;
 }
 
-export async function generateApmLeaderboard(gameId: string, timespan: number) {
+export async function generateApmLeaderboard(gameId: string, timespan: number, uniqueOnly: boolean = false) {
     // Parameter to differentiate different timespan values
-    const params = { timespan };
+    const params = { timespan, uniqueOnly };
 
     // Check cache first
     const cachedData = await getCachedReport(gameId, ReportType.APM, params);
@@ -44,35 +44,51 @@ export async function generateApmLeaderboard(gameId: string, timespan: number) {
 
     const allActions = await WorldUpdateModel.findAll({
         attributes: {
-            include: ['updated_at', 'player_name']
+            include: ['updated_at', 'player_name', 'x', 'y']
         },
         where: {
             game_id: gameId
         },
         order: ['updated_at']
     })
-    const playerActions = {};
+    const playerActions: Record<string, { time: number, x: number, y: number }[]> = {};
     for (const action of allActions) {
         if (!playerActions[action.player_name]) {
             playerActions[action.player_name] = [];
         }
-        playerActions[action.player_name].push(action.updated_at);
+
+        if (uniqueOnly) {
+            // Only add if this x,y combination hasn't been seen in the current window
+            const lastAction = playerActions[action.player_name][playerActions[action.player_name].length - 1];
+            if (!lastAction || lastAction.x !== action.x || lastAction.y !== action.y) {
+                playerActions[action.player_name].push({
+                    time: action.updated_at,
+                    x: action.x,
+                    y: action.y
+                });
+            }
+        } else {
+            playerActions[action.player_name].push({
+                time: action.updated_at,
+                x: action.x,
+                y: action.y
+            });
+        }
     }
 
     const leaderboard: { [player: string]: number } = {};
 
-    for (const [player, actions] of Object.entries(playerActions) as [string, number[]][]) {
-        // Sort actions once for this player
+    for (const [player, actions] of Object.entries(playerActions)) {
         let highestApm = 0;
 
         // Use sliding window approach
         let leftIndex = 0;
         for (let rightIndex = 0; rightIndex < actions.length; rightIndex++) {
-            const currentTime = actions[rightIndex];
+            const currentTime = actions[rightIndex].time;
             const windowStart = currentTime - timespan;
 
             // Slide left pointer forward until we're within the window
-            while (leftIndex < rightIndex && actions[leftIndex] < windowStart) {
+            while (leftIndex < rightIndex && actions[leftIndex].time < windowStart) {
                 leftIndex++;
             }
 

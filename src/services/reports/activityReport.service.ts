@@ -6,11 +6,19 @@ export async function generateSoldierStatsByFaction(filter?: WhereOptions<InferA
     if (!filter) filter = {};
 
     const cacheFilter = { ...filter } as InferAttributes<WorldUpdateModel>;
+    let useCache = true;
 
-    // Check cache first if game ID exists in filter
-    const cachedData = await getCachedReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_FACTION, cacheFilter);
-    if (cachedData) {
-        return cachedData;
+    // Don't use cache if filtering by dates
+    if (cacheFilter.created_at || cacheFilter.updated_at) {
+        useCache = false;
+    }
+
+    // Check cache first if game ID exists in filter and we can use cache
+    if (useCache) {
+        const cachedData = await getCachedReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_FACTION, cacheFilter);
+        if (cachedData) {
+            return cachedData;
+        }
     }
 
     const soldierData = await WorldUpdateModel.findAll({
@@ -21,37 +29,38 @@ export async function generateSoldierStatsByFaction(filter?: WhereOptions<InferA
     });
 
     // Aggregate soldiers sent by faction and faction sent to
-    const soldiersByFaction: { [sentFrom: string]: { [sentTo: string]: number } } = {}
+    const soldiersByFaction: { [sentFrom: string]: { [sentTo: string]: number } } = {};
 
+    // Process all entries in a single pass
     for (const entry of soldierData) {
-        // If the previous faction is null, that means all soldiers should be considered defense.
-        if (entry.previous_faction === null) {
-            entry.previous_faction = entry.player_faction;
+        const playerFaction = entry.player_faction;
+        const prevFaction = entry.previous_faction || playerFaction; // Default to player faction if null
+
+        // Initialize nested objects if needed
+        if (!soldiersByFaction[playerFaction]) {
+            soldiersByFaction[playerFaction] = { [playerFaction]: 0 };
         }
 
-        if (!soldiersByFaction[entry.player_faction]) {
-            soldiersByFaction[entry.player_faction] = {};
-        }
-        if (!soldiersByFaction[entry.player_faction][entry.previous_faction]) {
-            soldiersByFaction[entry.player_faction][entry.previous_faction] = 0;
-        }
-        if (!soldiersByFaction[entry.player_faction][entry.player_faction]) {
-            soldiersByFaction[entry.player_faction][entry.player_faction] = 0;
+        if (!soldiersByFaction[playerFaction][prevFaction]) {
+            soldiersByFaction[playerFaction][prevFaction] = 0;
         }
 
-        // If there was overflow, apply the overflowed amount to the player faction
-        if (entry.player_faction !== entry.previous_faction &&
-            entry.amount >= entry.tile_soldiers) {
-            soldiersByFaction[entry.player_faction][entry.player_faction] += entry.tile_soldiers;
-            entry.amount -= entry.tile_soldiers;
+        let amountToAdd = entry.amount;
+
+        // Handle overflow case
+        if (playerFaction !== prevFaction && entry.amount >= entry.tile_soldiers) {
+            soldiersByFaction[playerFaction][playerFaction] += entry.tile_soldiers;
+            amountToAdd -= entry.tile_soldiers;
         }
 
-        soldiersByFaction[entry.player_faction][entry.previous_faction] += entry.amount;
+        soldiersByFaction[playerFaction][prevFaction] += amountToAdd;
     }
 
-    // Cache the results
-    const cacheDuration = 1000 * 5 * 60; // 5 minutes
-    await cacheReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_FACTION, soldiersByFaction, cacheFilter, cacheDuration);
+    // Cache the results if we can use cache
+    if (useCache) {
+        const cacheDuration = 1000 * 5 * 60; // 5 minutes
+        await cacheReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_FACTION, soldiersByFaction, cacheFilter, cacheDuration);
+    }
 
     return soldiersByFaction;
 }
@@ -60,11 +69,19 @@ export async function generateSoldierStatsByTile(filter?: WhereOptions<InferAttr
     if (!filter) filter = {};
 
     const cacheFilter = { ...filter } as InferAttributes<WorldUpdateModel>;
+    let useCache = true;
 
-    // Check cache first if game ID exists in filter
-    const cachedData = await getCachedReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_FACTION, cacheFilter);
-    if (cachedData) {
-        return cachedData;
+    // Don't use cache if filtering by dates
+    if (cacheFilter.created_at || cacheFilter.updated_at) {
+        useCache = false;
+    }
+
+    // Check cache first if game ID exists in filter and we can use cache
+    if (useCache) {
+        const cachedData = await getCachedReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_TILE, cacheFilter);
+        if (cachedData) {
+            return cachedData;
+        }
     }
 
     const soldierData = await WorldUpdateModel.findAll({
@@ -86,9 +103,11 @@ export async function generateSoldierStatsByTile(filter?: WhereOptions<InferAttr
         soldiersByTile[entry.x][entry.y] += entry.amount;
     }
 
-    // Cache the results
-    const cacheDuration = 1000 * 5 * 60; // 5 minutes
-    await cacheReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_TILE, soldiersByTile, cacheFilter, cacheDuration);
+    // Cache the results if we can use cache
+    if (useCache) {
+        const cacheDuration = 1000 * 5 * 60; // 5 minutes
+        await cacheReport(`${cacheFilter.game_id}`, ReportType.SOLDIER_TILE, soldiersByTile, cacheFilter, cacheDuration);
+    }
 
     return soldiersByTile;
 }
