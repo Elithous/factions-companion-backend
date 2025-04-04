@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { generateSoldierStatsByFaction, generateSoldierStatsByTile, getAllActivities } from "../services/reports/activityReport.service";
+import { generateSoldierStatsByFaction, generateSoldierStatsByTile, getAllActivities, generatePlayerActionCounts } from "../services/reports/activityReport.service";
 import { getAvailableGameIds, getConfig, getTimespan } from '../services/reports/gameReport.service';
 import { WhereOptions, InferAttributes, WhereAttributeHashValue, Op } from 'sequelize';
 import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
@@ -228,8 +228,6 @@ export async function getTileLeaderboard(req: Request, res: Response) {
     }
 }
 
-
-
 export async function getAvailableGames(req: Request, res: Response) {
     try {
         res.status(200).send(await getAvailableGameIds());
@@ -267,5 +265,37 @@ export async function allActivities(req: Request, res: Response) {
         res.status(200).send(await getAllActivities(whereQuery));
     } catch (error) {
         res.status(400).json({ message: `Error: ${error}` });
+    }
+}
+
+export async function getPlayerActionCounts(req: Request, res: Response) {
+    try {
+        const { gameId, types } = req.query;
+
+        if (!gameId || !types) {
+            res.status(400).json({ message: 'Missing required parameters: gameId and types' });
+            return;
+        }
+
+        // Parse types from query string (expecting comma-separated values)
+        const typesArray = (types as string).split(',');
+
+        const actionCounts = await generatePlayerActionCounts(gameId as string, typesArray);
+
+        // Check Accept header to determine response format
+        if (req.accepts('html')) {
+            let output = '<table border="1"><tr><th>Player</th><th>Action Count</th></tr>';
+
+            for (const count of actionCounts) {
+                output += `<tr><td>${count.player_name}</td><td>${count.actions}</td></tr>`;
+            }
+
+            output += '</table>';
+            res.status(200).send(output);
+        } else {
+            res.status(200).json(actionCounts);
+        }
+    } catch (error) {
+        res.status(400).json({ message: `Error getting player action counts: ${error}` });
     }
 }

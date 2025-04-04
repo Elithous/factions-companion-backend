@@ -8,22 +8,28 @@ import {
     getGameConfig,
     allActivities,
     getPlayerApmLeaderboard,
-    getTileLeaderboard
+    getTileLeaderboard,
+    getPlayerActionCounts
 } from '../controllers/reports.controller';
 
 const router = express.Router();
 
+// Player-related routes
+router.get('/player/mvp', getPlayerMvpLeaderboard);
+router.get('/player/apm', getPlayerApmLeaderboard);
+router.get('/player/actions', getPlayerActionCounts);
+
+// Soldier-related routes
 router.get('/soldiers/faction', getSoldierStatsByFaction);
 router.get('/soldiers/tile', getSoliderStatsByTile);
 
-router.get('/leaderboard/mvp', getPlayerMvpLeaderboard);
-router.get('/leaderboard/apm', getPlayerApmLeaderboard);
-router.get('/leaderboard/tile', getTileLeaderboard);
-
+// Game-related routes
 router.get('/games', getAvailableGames);
 router.get('/games/timespan', getGameTimespan);
 router.get('/games/config', getGameConfig);
 
+// Other routes
+router.get('/tile', getTileLeaderboard);
 router.get('/activities/all', allActivities);
 
 export default router;

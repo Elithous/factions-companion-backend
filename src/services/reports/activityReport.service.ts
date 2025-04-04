@@ -1,6 +1,7 @@
 import { InferAttributes, WhereOptions } from "sequelize";
 import { WorldUpdateModel } from "../../models/activities/worldUpdate.model";
 import { cacheReport, getCachedReport, ReportType } from "./reportCache.service";
+import { sequelize } from "../../controllers/database.controller";
 
 export async function generateSoldierStatsByFaction(filter?: WhereOptions<InferAttributes<WorldUpdateModel>>) {
     if (!filter) filter = {};
@@ -118,4 +119,32 @@ export async function getAllActivities(filter?: WhereOptions<InferAttributes<Wor
             ...filter
         }
     });
+}
+
+export async function generatePlayerActionCounts(gameId: string, types: string[]) {
+    // Check cache first
+    const cachedData = await getCachedReport(gameId, ReportType.PLAYER_ACTIONS, { types });
+    if (cachedData) {
+        return cachedData;
+    }
+
+    // If no cache, generate the report
+    const actionCounts = await WorldUpdateModel.findAll({
+        attributes: [
+            'player_name',
+            [sequelize.fn('COUNT', sequelize.col('updated_at')), 'actions']
+        ],
+        where: {
+            game_id: gameId,
+            type: types
+        },
+        group: ['player_name'],
+        order: [[sequelize.fn('COUNT', sequelize.col('updated_at')), 'DESC']],
+        raw: true
+    });
+
+    // Cache the results
+    await cacheReport(gameId, ReportType.PLAYER_ACTIONS, actionCounts, { types });
+
+    return actionCounts;
 }
