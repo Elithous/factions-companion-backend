@@ -10,7 +10,8 @@ const endpointMap = {
     get_leaderboard: { url: `${baseUrl}game/{gameId}/leaderboard`, returnType: {} as Leaderboard },
     get_projects: { url: `${baseUrl}game/{gameId}/projects/list`, returnType: {} as any },
     get_old_projects: { url: `${baseUrl}game/{gameId}/projects/old`, returnType: {} as any },
-    get_case_data: { url: `${baseUrl}game/{gameId}/activities/case`, returnType: [] as PlayerActivity[] }
+    get_case_data: { url: `${baseUrl}game/{gameId}/activities/case`, returnType: [] as PlayerActivity[] },
+    list_all_activities: { url: `${baseUrl}game/{gameId}/activities/list`, returnType: { items: [] as PlayerActivity[], count: 0 } }
 }
 
 export type Endpoint = keyof typeof endpointMap;

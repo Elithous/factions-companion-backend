@@ -3,6 +3,7 @@ import { RawJsonModel } from "../models/rawJson.model";
 import { WorldUpdateModel } from "../models/activities/worldUpdate.model";
 import { PlayerActivity, PlayerActivityType } from "../types/playerActivity.type";
 import { CreationAttributes } from 'sequelize';
+import { DateTime } from 'luxon';
 
 type QueueTypes = 'world_socket'
 
@@ -124,6 +125,16 @@ export async function processWorldMessages(reprocess: boolean = false) {
 }
 
 export function parseActivityLine(activity: PlayerActivity, tileData: any) {
+    // Check date types and convert to unix time if needed.
+    if (typeof activity.created_at === 'string') {
+        const date = DateTime.fromISO(activity.created_at as string);
+        activity.created_at = date.toUnixInteger();
+    }
+    if (typeof activity.updated_at === 'string') {
+        const date = DateTime.fromISO(activity.updated_at as string);
+        activity.updated_at = date.toUnixInteger();
+    }
+
     // Upsert so we don't get an error on a race condition for the entry being created.
     const worldUpdate: CreationAttributes<WorldUpdateModel> = {
         ...activity,
