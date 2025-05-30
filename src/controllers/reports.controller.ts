@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { generateSoldierStatsByFaction, generateSoldierStatsByTile, getAllActivities, generatePlayerActionCounts } from "../services/reports/activityReport.service";
-import { getAvailableGameIds, getConfig, getTimespan } from '../services/reports/gameReport.service';
+import { getAvailableGameIds, getConfig, getTimespan, getAllActivePlayers } from '../services/reports/gameReport.service';
 import { WhereOptions, InferAttributes, WhereAttributeHashValue, Op } from 'sequelize';
 import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
 import { generateApmLeaderboard, generatePlayerMvpLeaderboard, generateTileLeaderboard } from '../services/reports/leaderboardReport.service';
@@ -297,5 +297,21 @@ export async function getPlayerActionCounts(req: Request, res: Response) {
         }
     } catch (error) {
         res.status(400).json({ message: `Error getting player action counts: ${error}` });
+    }
+}
+
+export async function getActivePlayers(req: Request, res: Response) {
+    try {
+        const { gameId } = req.query;
+
+        if (!gameId) {
+            res.status(400).json({ message: 'Missing required parameter: gameId' });
+            return;
+        }
+
+        const players = await getAllActivePlayers(gameId as string);
+        res.status(200).json(players);
+    } catch (error) {
+        res.status(400).json({ message: `Error getting active players: ${error}` });
     }
 }
