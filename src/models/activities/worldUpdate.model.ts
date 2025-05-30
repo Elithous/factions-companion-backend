@@ -7,13 +7,15 @@ import {
     ModelStatic
 } from "sequelize";
 import { BaseModel } from "../base.model";
+import { PlayerActivityType } from "../../types/playerActivity.type";
+import { FactionColor } from "../../types/faction.type";
 
 export class WorldUpdateModel extends BaseModel<InferAttributes<WorldUpdateModel>, InferCreationAttributes<WorldUpdateModel>> {
     declare id: number;
     declare x: number;
     declare y: number;
     declare amount: number;
-    declare type: string;
+    declare type: PlayerActivityType;
     // soldiers
     declare captured: boolean;
     declare previous_faction: string;
@@ -21,20 +23,20 @@ export class WorldUpdateModel extends BaseModel<InferAttributes<WorldUpdateModel
     declare support_type: string;
     declare kill: boolean;
     declare power: number;
-    declare killed_faction: string;
+    declare killed_faction: FactionColor | null;
     // workers
     declare project_type: string;
 
     declare player_id: number;
     declare player_name: string;
-    declare player_faction: string;
+    declare player_faction: FactionColor | null;
     declare game_id: number;
     declare created_at: number;
     declare updated_at: number;
 
-    declare tile_player: string;
-    declare tile_faction: string;
-    declare tile_soldiers: number;
+    declare tile_player: string | null;
+    declare tile_faction: FactionColor | null;
+    declare tile_soldiers: number | null;
 
     declare raw_json_id: number;
 

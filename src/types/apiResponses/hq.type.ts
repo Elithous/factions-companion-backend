@@ -63,7 +63,9 @@ export interface HqConfigModel {
         hq: number,
         name: string,
         requires: string | null,
-        unique: boolean
+        unique: boolean,
+        tiers: number,
+        category: string[]
     }[]
     knightBonus: number,
     guardianBonus: number,
@@ -83,9 +85,11 @@ export interface HqConfigModel {
             [faction in FactionColor]: { x: number, y: number}
         },
         name: string,
-        terrain_bonus: {
+        terrains_bonus: {
             [name: string]: EffectDetail[]
-        }
+        },
+        width: number,
+        height: number
     } | null,
     misc: {
         parameters: {
@@ -96,12 +100,12 @@ export interface HqConfigModel {
             hq_wood_cost_multiplier: number,
             hq_worker_cost_multiplier: number
         },
-        tileImprovementBonus: number
+        tileImprovementBonus: number,
         fortificationTileLevels: number[],
         improvementTileLevels: number[],
         allowedFortification: (string | null)[],
         allowedImprovement: (string | null)[],
-        minNumberOfVotes: number,
+        minNumberOfVotes: number
     },
     modeConfig: {
         tick_duration: number,
@@ -117,6 +121,7 @@ export interface HqConfigModel {
         estimated_duration: number,
         event_duration_multiplier: number,
         base_project_cost: number,
+        groups: boolean
     },
     world: string[][] | null
 }

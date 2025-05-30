@@ -47,3 +47,16 @@ export async function getConfig(gameId: string) {
 
     return config;
 }
+
+export async function getAllActivePlayers(gameId: string) {
+    const players = await WorldUpdateModel.findAll({
+        attributes: ['player_id', 'player_name'],
+        where: {
+            game_id: gameId
+        },
+        group: ['player_id', 'player_name'],
+        order: ['player_id']
+    });
+
+    return players;
+}
