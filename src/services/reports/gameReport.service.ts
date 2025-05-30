@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import { apiFetch } from "../../controllers/api.controller";
 import { WorldUpdateModel } from "../../models/activities/worldUpdate.model";
 import { GameConfigModel } from "../../models/config.model";
@@ -52,7 +53,10 @@ export async function getAllActivePlayers(gameId: string) {
     const players = await WorldUpdateModel.findAll({
         attributes: ['player_id', 'player_name'],
         where: {
-            game_id: gameId
+            game_id: gameId,
+            player_name: {
+                [Op.not]: null
+            }
         },
         group: ['player_id', 'player_name'],
         order: ['player_id']
