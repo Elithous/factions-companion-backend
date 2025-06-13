@@ -23,10 +23,13 @@ export type FactionSocketData = {
 export async function startWorldSocket(gameId: string) {
     if (!worldSockets[gameId]?.OPEN) {
         const worldSocketString = `${process.env.WS_BASE_URL}game/${gameId}/world_update`;
+        const authToken = process.env.AUTH_TOKEN;
+
+        const socketWithAuth = `${worldSocketString}?token=${authToken}`;
         // NOTE: WebSocket seems to have a weird issue with the way the token is processed.
         // Factions expects there to be a comma and a space between token and the auth token
         // while by default the WebSocket only does comma seperation. This is resolved in node_modules for me.
-        const ws = new ReconnectingWebSocket(worldSocketString, ['Token', process.env.AUTH_TOKEN], {
+        const ws = new ReconnectingWebSocket(socketWithAuth, [], {
             WebSocket,
             debug: false
         });
