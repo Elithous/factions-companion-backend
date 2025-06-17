@@ -251,3 +251,86 @@ export async function generateResourcesSentLeaderboard(gameId: string) {
     return sortedLeaderboard;
 }
 
+export async function generateResourcesReceivedLeaderboard(gameId: string) {
+    // Check cache first
+    const cachedData = await getCachedReport(gameId, ReportType.RESOURCES_RECEIVED);
+    if (cachedData) {
+        return cachedData;
+    }
+
+    const allResourceSends = await ActivitiesModel.findAll({
+        attributes: ['player_name', 'iron', 'wood', 'recipient', 'player_faction'],
+        where: {
+            game_id: gameId,
+            type: 'resources_sent'
+        },
+        order: ['recipient']
+    });
+
+    // Aggregate resources received by recipient and sender
+    const recipientResources: { [recipient: string]: { totalIron: number, totalWood: number, senders: { [sender: string]: { iron: number, wood: number } } } } = {};
+
+    for (const send of allResourceSends) {
+        const sender = send.player_name;
+        const recipient = send.recipient || 'unknown';
+        const iron = send.iron || 0;
+        const wood = send.wood || 0;
+        const senderFaction = send.player_faction;
+
+        // Skip if recipient is unknown or empty
+        if (!recipient || recipient === 'unknown') {
+            continue;
+        }
+
+        // Handle special case where recipient is "all" - use sender's faction color
+        const displayRecipient = recipient === 'all' ? `all (${senderFaction || 'unknown'})` : recipient;
+
+        // Initialize recipient entry if needed
+        if (!recipientResources[displayRecipient]) {
+            recipientResources[displayRecipient] = {
+                totalIron: 0,
+                totalWood: 0,
+                senders: {}
+            };
+        }
+
+        // Initialize sender entry if needed
+        if (!recipientResources[displayRecipient].senders[sender]) {
+            recipientResources[displayRecipient].senders[sender] = {
+                iron: 0,
+                wood: 0
+            };
+        }
+
+        // Add to totals
+        recipientResources[displayRecipient].totalIron += iron;
+        recipientResources[displayRecipient].totalWood += wood;
+        recipientResources[displayRecipient].senders[sender].iron += iron;
+        recipientResources[displayRecipient].senders[sender].wood += wood;
+    }
+
+    // Convert to sorted array format
+    const sortedLeaderboard = Object.entries(recipientResources)
+        .map(([recipient, data]) => ({
+            recipient,
+            totalIron: data.totalIron,
+            totalWood: data.totalWood,
+            totalResources: data.totalIron + data.totalWood,
+            senders: data.senders
+        }))
+        .sort((a, b) => b.totalResources - a.totalResources);
+
+    // Sort senders for each recipient by total resources received from them
+    sortedLeaderboard.forEach(entry => {
+        entry.senders = Object.fromEntries(
+            Object.entries(entry.senders)
+                .sort(([, a], [, b]) => (b.iron + b.wood) - (a.iron + a.wood))
+        );
+    });
+
+    // Cache the results
+    await cacheReport(gameId, ReportType.RESOURCES_RECEIVED, sortedLeaderboard);
+
+    return sortedLeaderboard;
+}
+

@@ -11,7 +11,8 @@ import {
     getTileLeaderboard,
     getPlayerActionCounts,
     getActivePlayers,
-    getResourcesSentLeaderboard
+    getResourcesSentLeaderboard,
+    getResourcesReceivedLeaderboard
 } from '../controllers/reports.controller';
 
 const router = express.Router();
@@ -33,7 +34,8 @@ router.get('/games/config', getGameConfig);
 
 // Other routes
 router.get('/tile', getTileLeaderboard);
-router.get('/resources', getResourcesSentLeaderboard);
+router.get('/resources/sent', getResourcesSentLeaderboard);
+router.get('/resources/received', getResourcesReceivedLeaderboard);
 router.get('/activities/all', allActivities);
 
 export default router;

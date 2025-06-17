@@ -3,7 +3,7 @@ import { generateSoldierStatsByFaction, generateSoldierStatsByTile, getAllActivi
 import { getAvailableGameIds, getConfig, getTimespan, getAllActivePlayers } from '../services/reports/gameReport.service';
 import { WhereOptions, InferAttributes, WhereAttributeHashValue, Op } from 'sequelize';
 import { ActivitiesModel } from '../models/activities/activities.model';
-import { generateApmLeaderboard, generatePlayerMvpLeaderboard, generateTileLeaderboard, generateResourcesSentLeaderboard } from '../services/reports/leaderboardReport.service';
+import { generateApmLeaderboard, generatePlayerMvpLeaderboard, generateTileLeaderboard, generateResourcesSentLeaderboard, generateResourcesReceivedLeaderboard } from '../services/reports/leaderboardReport.service';
 
 export async function getSoldierStatsByFaction(req: Request, res: Response) {
     try {
@@ -389,5 +389,81 @@ export async function getResourcesSentLeaderboard(req: Request, res: Response) {
         }
     } catch (error) {
         res.status(400).json({ message: `Error getting resources sent data: ${error}` });
+    }
+}
+
+export async function getResourcesReceivedLeaderboard(req: Request, res: Response) {
+    try {
+        const { gameId } = req.query;
+        const contentType = req.headers['accept'] || 'text/html';
+
+        if (!gameId) {
+            res.status(400).json({ message: 'Missing required parameter: gameId' });
+            return;
+        }
+
+        const stats = await generateResourcesReceivedLeaderboard(gameId as string);
+
+        // Check if client wants JSON
+        if (contentType.includes('application/json')) {
+            res.status(200).json(stats);
+        } else {
+            // Default to HTML response
+            let output = '<h2>Resources Received Leaderboard</h2>';
+            output += '<p>(Total resources received by player with breakdown by sender)</p>';
+            output += '<style>';
+            output += 'table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }';
+            output += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
+            output += 'th { background-color: #f2f2f2; }';
+            output += 'tr:nth-child(even) { background-color: #f9f9f9; }';
+            output += 'tr:hover { background-color: #f1f1f1; }';
+            output += '.sender-table { display: none; margin-top: 10px; }';
+            output += '.sender-table.show { display: table; }';
+            output += '.toggle-btn { background: #007bff; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; }';
+            output += '.toggle-btn:hover { background: #0056b3; }';
+            output += '</style>';
+            output += '<script>';
+            output += 'function toggleSenders(recipientIndex) {';
+            output += '  const table = document.getElementById("senders-" + recipientIndex);';
+            output += '  const btn = document.getElementById("btn-" + recipientIndex);';
+            output += '  if (table.classList.contains("show")) {';
+            output += '    table.classList.remove("show");';
+            output += '    btn.textContent = "Show Senders";';
+            output += '  } else {';
+            output += '    table.classList.add("show");';
+            output += '    btn.textContent = "Hide Senders";';
+            output += '  }';
+            output += '}';
+            output += '</script>';
+            output += '<table>';
+            output += '<tr><th>Rank</th><th>Player</th><th>Total Resources</th><th>Total Iron</th><th>Total Wood</th><th>Senders</th></tr>';
+            
+            stats.forEach((stat, index) => {
+                output += `<tr><td>${index + 1}</td><td>${stat.recipient}</td><td>${stat.totalResources}</td><td>${stat.totalIron}</td><td>${stat.totalWood}</td><td>`;
+                
+                // Add sender breakdown
+                const senders = Object.entries(stat.senders);
+                if (senders.length > 0) {
+                    output += `<button id="btn-${index}" class="toggle-btn" onclick="toggleSenders(${index})">Show Senders</button>`;
+                    output += `<table id="senders-${index}" class="sender-table">`;
+                    output += '<tr><th>Sender</th><th>Iron</th><th>Wood</th><th>Total</th></tr>';
+                    senders.forEach(([sender, resources]) => {
+                        const typedResources = resources as { iron: number, wood: number };
+                        const total = typedResources.iron + typedResources.wood;
+                        output += `<tr><td>${sender}</td><td>${typedResources.iron}</td><td>${typedResources.wood}</td><td>${total}</td></tr>`;
+                    });
+                    output += '</table>';
+                } else {
+                    output += 'None';
+                }
+                
+                output += '</td></tr>';
+            });
+            output += '</table>';
+
+            res.status(200).send(output);
+        }
+    } catch (error) {
+        res.status(400).json({ message: `Error getting resources received data: ${error}` });
     }
 }

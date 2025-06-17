@@ -10,7 +10,8 @@ export enum ReportType {
     SOLDIER_FACTION = "soldier_faction",
     SOLDIER_TILE = "soldier_tile",
     PLAYER_ACTIONS = "player_actions",
-    RESOURCES_SENT = "resources_sent"
+    RESOURCES_SENT = "resources_sent",
+    RESOURCES_RECEIVED = "resources_received"
 }
 
 // Default cache duration in milliseconds (1 hour)
