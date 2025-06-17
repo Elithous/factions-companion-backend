@@ -27,6 +27,14 @@ export class ActivitiesModel extends BaseModel<InferAttributes<ActivitiesModel>,
     // workers
     declare project_type: string;
 
+    // resources_sent
+    declare iron: number;
+    declare wood: number;
+    declare recipient: string;
+
+    // spec_picked
+    declare name: string;
+
     declare player_id: number;
     declare player_name: string;
     declare player_faction: FactionColor | null;
@@ -79,6 +87,18 @@ export class ActivitiesModel extends BaseModel<InferAttributes<ActivitiesModel>,
                 type: DataTypes.STRING
             },
             project_type: {
+                type: DataTypes.STRING
+            },
+            iron: {
+                type: DataTypes.INTEGER
+            },
+            wood: {
+                type: DataTypes.INTEGER
+            },
+            recipient: {
+                type: DataTypes.STRING
+            },
+            name: {
                 type: DataTypes.STRING
             },
             player_id: {

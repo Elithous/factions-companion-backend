@@ -10,7 +10,8 @@ import {
     getPlayerApmLeaderboard,
     getTileLeaderboard,
     getPlayerActionCounts,
-    getActivePlayers
+    getActivePlayers,
+    getResourcesSentLeaderboard
 } from '../controllers/reports.controller';
 
 const router = express.Router();
@@ -32,6 +33,7 @@ router.get('/games/config', getGameConfig);
 
 // Other routes
 router.get('/tile', getTileLeaderboard);
+router.get('/resources', getResourcesSentLeaderboard);
 router.get('/activities/all', allActivities);
 
 export default router;

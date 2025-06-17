@@ -3,7 +3,7 @@ import { generateSoldierStatsByFaction, generateSoldierStatsByTile, getAllActivi
 import { getAvailableGameIds, getConfig, getTimespan, getAllActivePlayers } from '../services/reports/gameReport.service';
 import { WhereOptions, InferAttributes, WhereAttributeHashValue, Op } from 'sequelize';
 import { ActivitiesModel } from '../models/activities/activities.model';
-import { generateApmLeaderboard, generatePlayerMvpLeaderboard, generateTileLeaderboard } from '../services/reports/leaderboardReport.service';
+import { generateApmLeaderboard, generatePlayerMvpLeaderboard, generateTileLeaderboard, generateResourcesSentLeaderboard } from '../services/reports/leaderboardReport.service';
 
 export async function getSoldierStatsByFaction(req: Request, res: Response) {
     try {
@@ -313,5 +313,81 @@ export async function getActivePlayers(req: Request, res: Response) {
         res.status(200).json(players);
     } catch (error) {
         res.status(400).json({ message: `Error getting active players: ${error}` });
+    }
+}
+
+export async function getResourcesSentLeaderboard(req: Request, res: Response) {
+    try {
+        const { gameId } = req.query;
+        const contentType = req.headers['accept'] || 'text/html';
+
+        if (!gameId) {
+            res.status(400).json({ message: 'Missing required parameter: gameId' });
+            return;
+        }
+
+        const stats = await generateResourcesSentLeaderboard(gameId as string);
+
+        // Check if client wants JSON
+        if (contentType.includes('application/json')) {
+            res.status(200).json(stats);
+        } else {
+            // Default to HTML response
+            let output = '<h2>Resources Sent Leaderboard</h2>';
+            output += '<p>(Total resources sent by player with breakdown by recipient)</p>';
+            output += '<style>';
+            output += 'table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }';
+            output += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
+            output += 'th { background-color: #f2f2f2; }';
+            output += 'tr:nth-child(even) { background-color: #f9f9f9; }';
+            output += 'tr:hover { background-color: #f1f1f1; }';
+            output += '.recipient-table { display: none; margin-top: 10px; }';
+            output += '.recipient-table.show { display: table; }';
+            output += '.toggle-btn { background: #007bff; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; }';
+            output += '.toggle-btn:hover { background: #0056b3; }';
+            output += '</style>';
+            output += '<script>';
+            output += 'function toggleRecipients(playerIndex) {';
+            output += '  const table = document.getElementById("recipients-" + playerIndex);';
+            output += '  const btn = document.getElementById("btn-" + playerIndex);';
+            output += '  if (table.classList.contains("show")) {';
+            output += '    table.classList.remove("show");';
+            output += '    btn.textContent = "Show Recipients";';
+            output += '  } else {';
+            output += '    table.classList.add("show");';
+            output += '    btn.textContent = "Hide Recipients";';
+            output += '  }';
+            output += '}';
+            output += '</script>';
+            output += '<table>';
+            output += '<tr><th>Rank</th><th>Player</th><th>Total Resources</th><th>Total Iron</th><th>Total Wood</th><th>Recipients</th></tr>';
+            
+            stats.forEach((stat, index) => {
+                output += `<tr><td>${index + 1}</td><td>${stat.player}</td><td>${stat.totalResources}</td><td>${stat.totalIron}</td><td>${stat.totalWood}</td><td>`;
+                
+                // Add recipient breakdown
+                const recipients = Object.entries(stat.recipients);
+                if (recipients.length > 0) {
+                    output += `<button id="btn-${index}" class="toggle-btn" onclick="toggleRecipients(${index})">Show Recipients</button>`;
+                    output += `<table id="recipients-${index}" class="recipient-table">`;
+                    output += '<tr><th>Recipient</th><th>Iron</th><th>Wood</th><th>Total</th></tr>';
+                    recipients.forEach(([recipient, resources]) => {
+                        const typedResources = resources as { iron: number, wood: number };
+                        const total = typedResources.iron + typedResources.wood;
+                        output += `<tr><td>${recipient}</td><td>${typedResources.iron}</td><td>${typedResources.wood}</td><td>${total}</td></tr>`;
+                    });
+                    output += '</table>';
+                } else {
+                    output += 'None';
+                }
+                
+                output += '</td></tr>';
+            });
+            output += '</table>';
+
+            res.status(200).send(output);
+        }
+    } catch (error) {
+        res.status(400).json({ message: `Error getting resources sent data: ${error}` });
     }
 }

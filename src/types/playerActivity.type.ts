@@ -36,6 +36,7 @@ export enum PlayerActivityType {
     ROLE_CHANGED = "role_changed",
     SPEC_PICKED = "spec_picked",
     PING = "ping",
+    RESOURCES_SENT = "resources_sent",
 
     // faction related
     EVENT_PROJECT_COMPLETED = "event_project_completed",
