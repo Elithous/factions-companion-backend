@@ -1,12 +1,12 @@
 import { InferAttributes, WhereOptions } from "sequelize";
-import { WorldUpdateModel } from "../../models/activities/worldUpdate.model";
+import { ActivitiesModel } from "../../models/activities/activities.model";
 import { cacheReport, getCachedReport, ReportType } from "./reportCache.service";
 import { sequelize } from "../../controllers/database.controller";
 
-export async function generateSoldierStatsByFaction(filter?: WhereOptions<InferAttributes<WorldUpdateModel>>) {
+export async function generateSoldierStatsByFaction(filter?: WhereOptions<InferAttributes<ActivitiesModel>>) {
     if (!filter) filter = {};
 
-    const cacheFilter = { ...filter } as InferAttributes<WorldUpdateModel>;
+    const cacheFilter = { ...filter } as InferAttributes<ActivitiesModel>;
     let useCache = true;
 
     // Don't use cache if filtering by dates
@@ -22,7 +22,7 @@ export async function generateSoldierStatsByFaction(filter?: WhereOptions<InferA
         }
     }
 
-    const soldierData = await WorldUpdateModel.findAll({
+    const soldierData = await ActivitiesModel.findAll({
         where: {
             ...filter,
             type: ['soldiers_attack', 'soldiers_defend']
@@ -66,10 +66,10 @@ export async function generateSoldierStatsByFaction(filter?: WhereOptions<InferA
     return soldiersByFaction;
 }
 
-export async function generateSoldierStatsByTile(filter?: WhereOptions<InferAttributes<WorldUpdateModel>>) {
+export async function generateSoldierStatsByTile(filter?: WhereOptions<InferAttributes<ActivitiesModel>>) {
     if (!filter) filter = {};
 
-    const cacheFilter = { ...filter } as InferAttributes<WorldUpdateModel>;
+    const cacheFilter = { ...filter } as InferAttributes<ActivitiesModel>;
     let useCache = true;
 
     // Don't use cache if filtering by dates
@@ -85,7 +85,7 @@ export async function generateSoldierStatsByTile(filter?: WhereOptions<InferAttr
         }
     }
 
-    const soldierData = await WorldUpdateModel.findAll({
+    const soldierData = await ActivitiesModel.findAll({
         where: {
             ...filter,
             type: ['soldiers_attack', 'soldiers_defend']
@@ -113,8 +113,8 @@ export async function generateSoldierStatsByTile(filter?: WhereOptions<InferAttr
     return soldiersByTile;
 }
 
-export async function getAllActivities(filter?: WhereOptions<InferAttributes<WorldUpdateModel>>) {
-    return await WorldUpdateModel.findAll({
+export async function getAllActivities(filter?: WhereOptions<InferAttributes<ActivitiesModel>>) {
+    return await ActivitiesModel.findAll({
         where: {
             ...filter
         }
@@ -129,7 +129,7 @@ export async function generatePlayerActionCounts(gameId: string, types: string[]
     }
 
     // If no cache, generate the report
-    const actionCounts = await WorldUpdateModel.findAll({
+    const actionCounts = await ActivitiesModel.findAll({
         attributes: [
             'player_name',
             [sequelize.fn('COUNT', sequelize.col('updated_at')), 'actions']

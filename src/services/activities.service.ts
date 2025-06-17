@@ -1,5 +1,5 @@
 import { apiFetch, getCaseData } from "../controllers/api.controller";
-import { WorldUpdateModel } from "../models/activities/worldUpdate.model";
+import { ActivitiesModel } from "../models/activities/activities.model";
 import { FactionColor } from "../types/faction.type";
 import { parseActivityLine } from "./factionsWebsocket.service";
 import { getConfig } from "./reports/gameReport.service";
@@ -23,7 +23,7 @@ export async function saveAllCaseData(gameId: string) {
                     activities.push(parseActivityLine(activity, undefined));
                 }
 
-                WorldUpdateModel.bulkCreate(activities, {
+                ActivitiesModel.bulkCreate(activities, {
                     updateOnDuplicate: ['id']
                 });
 
@@ -59,7 +59,7 @@ export async function savePastActivities(gameId: string) {
             activities.push(parseActivityLine(activity, undefined));
         }
 
-        WorldUpdateModel.bulkCreate(activities, {
+        ActivitiesModel.bulkCreate(activities, {
             updateOnDuplicate: ['id']
         });
 
@@ -90,7 +90,7 @@ export async function updateMissingTileData(gameId: string) {
     for (let x = 0; x < width; x++) {
         for (let y = 0; y < height; y++) {
             // Get all tile history for this tile, sorted by time.
-            const tileData = await WorldUpdateModel.findAll({
+            const tileData = await ActivitiesModel.findAll({
                 where: {
                     x, y,
                     game_id: gameId

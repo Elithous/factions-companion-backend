@@ -2,13 +2,13 @@ import express, { Request, Response } from 'express';
 import { generateSoldierStatsByFaction, generateSoldierStatsByTile, getAllActivities, generatePlayerActionCounts } from "../services/reports/activityReport.service";
 import { getAvailableGameIds, getConfig, getTimespan, getAllActivePlayers } from '../services/reports/gameReport.service';
 import { WhereOptions, InferAttributes, WhereAttributeHashValue, Op } from 'sequelize';
-import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
+import { ActivitiesModel } from '../models/activities/activities.model';
 import { generateApmLeaderboard, generatePlayerMvpLeaderboard, generateTileLeaderboard } from '../services/reports/leaderboardReport.service';
 
 export async function getSoldierStatsByFaction(req: Request, res: Response) {
     try {
         const { gameId, playerName, tileX, tileY, fromFaction, dateStart, dateEnd } = req.query;
-        let whereQuery: WhereOptions<InferAttributes<WorldUpdateModel>> = {
+        let whereQuery: WhereOptions<InferAttributes<ActivitiesModel>> = {
             game_id: gameId as string
         };
         if (playerName) {
@@ -44,7 +44,7 @@ export async function getSoldierStatsByFaction(req: Request, res: Response) {
 export async function getSoliderStatsByTile(req: Request, res: Response) {
     try {
         const { gameId, playerName, fromFaction, dateStart, dateEnd } = req.query;
-        let whereQuery: WhereOptions<InferAttributes<WorldUpdateModel>> = {
+        let whereQuery: WhereOptions<InferAttributes<ActivitiesModel>> = {
             game_id: gameId as string
         };
         if (playerName) {
@@ -259,7 +259,7 @@ export async function getGameConfig(req: Request, res: Response) {
 export async function allActivities(req: Request, res: Response) {
     try {
         const { gameId } = req.query;
-        let whereQuery: WhereOptions<InferAttributes<WorldUpdateModel>> = {
+        let whereQuery: WhereOptions<InferAttributes<ActivitiesModel>> = {
             game_id: gameId as string
         };
         res.status(200).send(await getAllActivities(whereQuery));

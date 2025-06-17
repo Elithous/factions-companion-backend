@@ -1,9 +1,9 @@
 import { Attributes, Op } from "sequelize";
-import { WorldUpdateModel } from "../models/activities/worldUpdate.model";
+import { ActivitiesModel } from "../models/activities/activities.model";
 import { sequelize } from "../controllers/database.controller";
 
 export async function addMissingTileData() {
-    const entriesWithMissing = await WorldUpdateModel.findAll({
+    const entriesWithMissing = await ActivitiesModel.findAll({
         where: {
             type: ['soldiers_attack', 'soldiers_defend'],
             [Op.or]: {
@@ -18,7 +18,7 @@ export async function addMissingTileData() {
     });
 
     for (const entry of entriesWithMissing) {
-        const previous = await getPreviousWorldUpdate(entry);
+        const previous = await getPreviousActivity(entry);
         
         // Default to tiles staying the same
         entry.tile_faction = previous?.tile_faction ?? entry.player_faction;
@@ -47,24 +47,24 @@ export async function addMissingTileData() {
     }
 }
 
-function getPreviousWorldUpdate(worldUpdate: Attributes<WorldUpdateModel>) {
+function getPreviousActivity(activity: Attributes<ActivitiesModel>) {
     // This is ugly but the easiest way I know to get the previous tile data.
     const subQuery = `(
                 select
                     MAX(updated_at)
                 from
-                    world_update
+                    activities
                 where (1=1)
                     and type in ('soldiers_attack', 'soldiers_defend')
-                    and x = ${worldUpdate.x}
-                    and y = ${worldUpdate.y}
-                    and updated_at < ${worldUpdate.updated_at}
+                    and x = ${activity.x}
+                    and y = ${activity.y}
+                    and updated_at < ${activity.updated_at}
             )`;
 
-    return WorldUpdateModel.findOne({
+    return ActivitiesModel.findOne({
         where: {
-            x: worldUpdate.x,
-            y: worldUpdate.y,
+            x: activity.x,
+            y: activity.y,
             updated_at: { [Op.eq]: sequelize.literal(subQuery)}
         }
     });

@@ -1,11 +1,11 @@
 import { Op } from "sequelize";
 import { apiFetch } from "../../controllers/api.controller";
-import { WorldUpdateModel } from "../../models/activities/worldUpdate.model";
+import { ActivitiesModel } from "../../models/activities/activities.model";
 import { GameConfigModel } from "../../models/config.model";
 import { HqConfigModel } from "../../types/apiResponses/hq.type";
 
 export async function getAvailableGameIds() {
-    const gameIds = await WorldUpdateModel.findAll({
+    const gameIds = await ActivitiesModel.findAll({
         attributes: ['game_id'],
         group: ['game_id'],
         order: [['game_id', 'DESC']]
@@ -17,12 +17,12 @@ export async function getAvailableGameIds() {
 }
 
 export async function getTimespan(gameId: string) {
-    const minTime = await WorldUpdateModel.min('created_at', {
+    const minTime = await ActivitiesModel.min('created_at', {
         where: {
             game_id: gameId
         }
     });
-    const maxTime = await WorldUpdateModel.max('created_at', {
+    const maxTime = await ActivitiesModel.max('created_at', {
         where: {
             game_id: gameId
         }
@@ -50,7 +50,7 @@ export async function getConfig(gameId: string) {
 }
 
 export async function getAllActivePlayers(gameId: string) {
-    const players = await WorldUpdateModel.findAll({
+    const players = await ActivitiesModel.findAll({
         attributes: ['player_id', 'player_name'],
         where: {
             game_id: gameId,

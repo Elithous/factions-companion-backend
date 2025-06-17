@@ -1,5 +1,5 @@
 import { apiFetch } from "../../controllers/api.controller";
-import { WorldUpdateModel } from "../../models/activities/worldUpdate.model";
+import { ActivitiesModel } from "../../models/activities/activities.model";
 import { cacheReport, getCachedReport, ReportType } from "./reportCache.service";
 
 export async function generatePlayerMvpLeaderboard(gameId: string) {
@@ -42,7 +42,7 @@ export async function generateApmLeaderboard(gameId: string, timespan: number, u
         return cachedData;
     }
 
-    const allActions = await WorldUpdateModel.findAll({
+    const allActions = await ActivitiesModel.findAll({
         attributes: {
             include: ['updated_at', 'player_name', 'x', 'y']
         },
@@ -114,7 +114,7 @@ export async function generateTileLeaderboard(gameId: string) {
         return cachedData;
     }
 
-    const allTileUpdates = await WorldUpdateModel.findAll({
+    const allTileUpdates = await ActivitiesModel.findAll({
         attributes: ['player_name', 'updated_at', 'x', 'y', 'captured'],
         where: {
             game_id: gameId,

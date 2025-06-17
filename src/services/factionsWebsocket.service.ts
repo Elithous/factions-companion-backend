@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { RawJsonModel } from "../models/rawJson.model";
-import { WorldUpdateModel } from "../models/activities/worldUpdate.model";
+import { ActivitiesModel } from "../models/activities/activities.model";
 import { PlayerActivity, PlayerActivityType } from "../types/playerActivity.type";
 import { CreationAttributes } from 'sequelize';
 import { DateTime } from 'luxon';
@@ -51,7 +51,7 @@ async function saveMessages(type: QueueTypes) {
 export async function processWorldMessages(reprocess: boolean = false) {
     if (reprocess) {
         // Clear old data and re-process everything from json data.
-        await WorldUpdateModel.destroy({ cascade: true, where: {} });
+        await ActivitiesModel.destroy({ cascade: true, where: {} });
         await RawJsonModel.update({ processed: false }, { where: {} });
     }
 
@@ -67,7 +67,7 @@ export async function processWorldMessages(reprocess: boolean = false) {
 
     try {
         const processedIds: number[] = [];
-        const newActivity: CreationAttributes<WorldUpdateModel>[] = [];
+        const newActivity: CreationAttributes<ActivitiesModel>[] = [];
         for (const message of unprocessedMessages) {
             const data = message.data;
 
@@ -98,14 +98,14 @@ export async function processWorldMessages(reprocess: boolean = false) {
         }
 
         // Remove duplicate entries within new entries
-        const unduped: { [id: number]: CreationAttributes<WorldUpdateModel> } = {};
+        const unduped: { [id: number]: CreationAttributes<ActivitiesModel> } = {};
         newActivity.forEach(update => {
             const mostRecent = unduped[update.id]?.updated_at ?? 0;
             if (update.updated_at > mostRecent) {
                 unduped[update.id] = update;
             }
         });
-        WorldUpdateModel.bulkCreate(Object.values(unduped), {
+        ActivitiesModel.bulkCreate(Object.values(unduped), {
             updateOnDuplicate: ['id']
         });
 
@@ -136,7 +136,7 @@ export function parseActivityLine(activity: PlayerActivity, tileData: any) {
     }
 
     // Upsert so we don't get an error on a race condition for the entry being created.
-    const worldUpdate: CreationAttributes<WorldUpdateModel> = {
+    const activityUpdate: CreationAttributes<ActivitiesModel> = {
         ...activity,
         ...activity.data,
         support_type: activity.name,
@@ -148,7 +148,7 @@ export function parseActivityLine(activity: PlayerActivity, tileData: any) {
         tile_soldiers: tileData?.s
     };
 
-    return worldUpdate;
+    return activityUpdate;
 }
 
 export async function readWorldMessagesFile(path: string) {
@@ -159,14 +159,14 @@ export async function readWorldMessagesFile(path: string) {
 export async function parseActivityFile(path: string) {
     const file = JSON.parse(fs.readFileSync(path).toString()) as any[];
 
-    const newActivity: CreationAttributes<WorldUpdateModel>[] = [];
+    const newActivity: CreationAttributes<ActivitiesModel>[] = [];
     for (const activity of file) {
         newActivity.push({
             ...parseActivityLine(activity, undefined),
             raw_json_id: -1
         });
     }
-    WorldUpdateModel.bulkCreate(newActivity, {
+    ActivitiesModel.bulkCreate(newActivity, {
         updateOnDuplicate: ['id']
     });
 }

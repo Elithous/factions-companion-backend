@@ -1,6 +1,6 @@
 import { Sequelize } from "sequelize";
 import config from '../config/config';
-import { WorldUpdateModel } from '../models/activities/worldUpdate.model';
+import { ActivitiesModel } from '../models/activities/activities.model';
 import { RawJsonModel } from '../models/rawJson.model';
 import { SettingsModel } from "../models/setting.model";
 import { GameConfigModel } from "../models/config.model";
@@ -9,7 +9,7 @@ import ReportCacheModel from "../models/reportCache.model";
 export let sequelize: Sequelize;
 
 const models = [
-    WorldUpdateModel,
+    ActivitiesModel,
     RawJsonModel,
     SettingsModel,
     GameConfigModel,

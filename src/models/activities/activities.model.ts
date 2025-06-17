@@ -10,7 +10,7 @@ import { BaseModel } from "../base.model";
 import { PlayerActivityType } from "../../types/playerActivity.type";
 import { FactionColor } from "../../types/faction.type";
 
-export class WorldUpdateModel extends BaseModel<InferAttributes<WorldUpdateModel>, InferCreationAttributes<WorldUpdateModel>> {
+export class ActivitiesModel extends BaseModel<InferAttributes<ActivitiesModel>, InferCreationAttributes<ActivitiesModel>> {
     declare id: number;
     declare x: number;
     declare y: number;
@@ -118,8 +118,8 @@ export class WorldUpdateModel extends BaseModel<InferAttributes<WorldUpdateModel
     static modelOptions(): ModelOptions {
         return {
             ...super.modelOptions(),
-            modelName: 'WorldUpdate',
-            tableName: 'world_update'
+            modelName: 'Activities',
+            tableName: 'activities'
         }
     }
 
@@ -130,7 +130,7 @@ export class WorldUpdateModel extends BaseModel<InferAttributes<WorldUpdateModel
     }
 }
 
-export declare type WorldUpdateType = typeof WorldUpdateModel;
-export declare type WorldUpdateCtor = {
-    new (): WorldUpdateModel;
-} & WorldUpdateModel;
+export declare type ActivitiesType = typeof ActivitiesModel;
+export declare type ActivitiesCtor = {
+    new (): ActivitiesModel;
+} & ActivitiesModel; 
