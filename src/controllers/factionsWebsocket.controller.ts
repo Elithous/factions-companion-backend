@@ -3,7 +3,7 @@ import ReconnectingWebSocket from "reconnecting-websocket"
 import { PlayerActivity } from "../types/playerActivity.type";
 import { handleMessage, processWorldMessages } from "../services/factionsWebsocket.service";
 import { getSetting, setSetting } from "../services/settings.service";
-import { saveAllCaseData, savePastActivities } from "../services/activities.service";
+import { saveAllCaseData, savePastActivities, updateMissingTileData } from "../services/activities.service";
 import { apiFetch } from "./api.controller";
 import { FactionsGame } from "../types/apiResponses/factionsGame.type";
 
@@ -171,12 +171,13 @@ export async function updateAllActiveGame() {
 
     // Remove each completed game from the watch list and stop watching
     for (const game of completedGames) {
-        socketSetting.watchList.filter(id => id !== game.id.toString());
-        await unsetWatchGame(game.id.toString());
+        const gameId = game.id.toString();
+        socketSetting.watchList.filter(id => id !== gameId);
+        await unsetWatchGame(gameId);
         console.log(`Removed game ${game.id} from watch list (status: ${game.status})`);
 
         // Update any missing data using the logs endpoint
-        savePastActivities(game.id.toString());
+        savePastActivities(gameId).then(() => updateMissingTileData(gameId));
     }
 
     // Save the updated watch list
