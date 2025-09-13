@@ -1,10 +1,11 @@
 import WebSocket from "ws";
 import ReconnectingWebSocket from "reconnecting-websocket"
-import fs from 'fs';
 import { PlayerActivity } from "../types/playerActivity.type";
 import { handleMessage, processWorldMessages } from "../services/factionsWebsocket.service";
 import { getSetting, setSetting } from "../services/settings.service";
-import { saveAllCaseData } from "../services/activities.service";
+import { saveAllCaseData, savePastActivities } from "../services/activities.service";
+import { apiFetch } from "./api.controller";
+import { FactionsGame } from "../types/apiResponses/factionsGame.type";
 
 const worldSockets: { [gameId: string]: ReconnectingWebSocket } = {};
 const factionSocket: { [gameId: string]: ReconnectingWebSocket } = {};
@@ -132,4 +133,52 @@ export async function stopAllPeriodicParsing() {
         await stopPeriodicParsing(gameId);
     }
     console.log('Stopped all periodic parsing');
+}
+
+// Adds all games in LOBBY or IN_PROGRESS to the watch list if not already present
+export async function updateAllActiveGame() {
+    // Fetch all games from the API
+    let games: FactionsGame[] = [];
+    try {
+        // The second argument to apiFetch is gameId, but for list_games it is not used, so pass an empty string
+        games = await apiFetch('list_games', '');
+    } catch (error) {
+        console.error('Failed to fetch games:', error);
+        return;
+    }
+
+    // Get the current socket setting and watch list
+    const socketSetting = await getSetting('socket');
+    const watchList: string[] = socketSetting.watchList || [];
+
+    // Filter games that are LOBBY or IN_PROGRESS and not already in the watch list
+    const activeGames = games.filter(game =>
+        (game.status === 'LOBBY' || game.status === 'IN_PROGRESS' || game.status === 'PLAYING') &&
+        !watchList.includes(game.id.toString())
+    );
+
+    // Add each active game to the watch list and start watching
+    for (const game of activeGames) {
+        socketSetting.watchList.push(game.id.toString());
+        await watchGame(game.id.toString());
+        console.log(`Added game ${game.id} to watch list (status: ${game.status})`);
+    }
+
+    // Filter games that are COMPLETED and in the watch list
+    const completedGames = games.filter(game =>
+        game.status === 'COMPLETED' && watchList.includes(game.id.toString())
+    );
+
+    // Remove each completed game from the watch list and stop watching
+    for (const game of completedGames) {
+        socketSetting.watchList.filter(id => id !== game.id.toString());
+        await unsetWatchGame(game.id.toString());
+        console.log(`Removed game ${game.id} from watch list (status: ${game.status})`);
+
+        // Update any missing data using the logs endpoint
+        savePastActivities(game.id.toString());
+    }
+
+    // Save the updated watch list
+    await setSetting('socket', socketSetting);
 }

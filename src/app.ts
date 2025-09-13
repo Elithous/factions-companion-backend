@@ -3,7 +3,7 @@ import cors from 'cors';
 import { initDB } from './controllers/database.controller';
 import { getSetting, initSettings } from './services/settings.service';
 import routes from './routes';
-import { watchGame } from './controllers/factionsWebsocket.controller';
+import { watchGame, updateAllActiveGame } from './controllers/factionsWebsocket.controller';
 import config from './config/config';
 
 async function start() {
@@ -19,6 +19,15 @@ async function start() {
     });
     // Get current game settings to allow cost calcs
     // Maybe something with the map?
+    // savePastActivities('31');
+
+    // Periodically check for new active games to watch every hour
+    setInterval(() => {
+        updateAllActiveGame().catch(err => console.error('Error in watchAllActiveGames:', err));
+    }, 60 * 60 * 1000); // 1 hour in milliseconds
+
+    // Run once on startup
+    updateAllActiveGame().catch(err => console.error('Error in watchAllActiveGames (startup):', err));
 
     // Express setup
     const app: Express = express();

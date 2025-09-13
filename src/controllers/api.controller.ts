@@ -1,4 +1,5 @@
 import { HqConfigModel, HqEffectsModel, HqInfoModel } from "../types/apiResponses/hq.type";
+import { FactionsGame } from "../types/apiResponses/factionsGame.type";
 import { Leaderboard } from "../types/leaderboard.type";
 import { PlayerActivity } from "../types/playerActivity.type";
 
@@ -11,7 +12,8 @@ const endpointMap = {
     get_projects: { url: `${baseUrl}game/{gameId}/projects/list`, returnType: {} as any },
     get_old_projects: { url: `${baseUrl}game/{gameId}/projects/old`, returnType: {} as any },
     get_case_data: { url: `${baseUrl}game/{gameId}/activities/case`, returnType: [] as PlayerActivity[] },
-    list_all_activities: { url: `${baseUrl}game/{gameId}/activities/list`, returnType: { items: [] as PlayerActivity[], count: 0 } }
+    list_all_activities: { url: `${baseUrl}game/{gameId}/activities/list`, returnType: { items: [] as PlayerActivity[], count: 0 } },
+    list_games: { url: `${baseUrl}games/list`, returnType: [] as FactionsGame[] }
 }
 
 export type Endpoint = keyof typeof endpointMap;
