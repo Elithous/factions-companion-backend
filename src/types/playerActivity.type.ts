@@ -8,12 +8,12 @@ export interface PlayerActivity {
     player: {
         id: number
         username: string
-    }
+    } | null,
     name?: string
     faction?: FactionColor
     game_id?: number
-    x?: number
-    y?: number
+    x?: number | null
+    y?: number | null
     amount?: number
     data?: any
 };
