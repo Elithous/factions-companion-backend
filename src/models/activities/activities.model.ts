@@ -46,6 +46,8 @@ export class ActivitiesModel extends BaseModel<InferAttributes<ActivitiesModel>,
     declare tile_faction: FactionColor | null;
     declare tile_soldiers: number | null;
 
+    declare data: object;
+
     declare raw_json_id: number;
 
     static modelAttributes(): ModelAttributes {
@@ -127,6 +129,9 @@ export class ActivitiesModel extends BaseModel<InferAttributes<ActivitiesModel>,
             },
             tile_soldiers: {
                 type: DataTypes.INTEGER
+            },
+            data: {
+                type: DataTypes.JSON
             },
             raw_json_id: {
                 // I do not add this as a forgein key so associations aren't needed. This field is only for manual debugging anyway
