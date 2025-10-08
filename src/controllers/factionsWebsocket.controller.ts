@@ -172,7 +172,7 @@ export async function updateAllActiveGame() {
     // Remove each completed game from the watch list and stop watching
     for (const game of completedGames) {
         const gameId = game.id.toString();
-        socketSetting.watchList.filter(id => id !== gameId);
+        socketSetting.watchList = socketSetting.watchList.filter(id => id !== gameId);
         await unsetWatchGame(gameId);
         console.log(`Removed game ${game.id} from watch list (status: ${game.status})`);
 
