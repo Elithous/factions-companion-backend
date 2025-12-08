@@ -60,7 +60,7 @@ export async function savePastActivities(gameId: string) {
         }
 
         ActivitiesModel.bulkCreate(activities, {
-            updateOnDuplicate: ['id']
+            updateOnDuplicate: ['id', 'data']
         });
 
         currentBatch++;
