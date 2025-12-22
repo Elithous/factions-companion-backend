@@ -11,8 +11,9 @@ import {
     getTileLeaderboard,
     getPlayerActionCounts,
     getActivePlayers,
+    getPlayerStatsByPlayerName,
     getResourcesSentLeaderboard,
-    getResourcesReceivedLeaderboard
+    getResourcesReceivedLeaderboard,
 } from '../controllers/reports.controller';
 
 const router = express.Router();
@@ -22,6 +23,7 @@ router.get('/player/mvp', getPlayerMvpLeaderboard);
 router.get('/player/apm', getPlayerApmLeaderboard);
 router.get('/player/actions', getPlayerActionCounts);
 router.get('/player/active', getActivePlayers);
+router.get('/player/stats/:playerName', getPlayerStatsByPlayerName);
 
 // Soldier-related routes
 router.get('/soldiers/faction', getSoldierStatsByFaction);

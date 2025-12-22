@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import { generateSoldierStatsByFaction, generateSoldierStatsByTile, getAllActivities, generatePlayerActionCounts } from "../services/reports/activityReport.service";
+import { generateSoldierStatsByFaction, generateSoldierStatsByTile, getAllActivities, generatePlayerActionCounts, generatePlayerStatsByPlayerName } from "../services/reports/activityReport.service";
 import { getAvailableGameIds, getConfig, getTimespan, getAllActivePlayers } from '../services/reports/gameReport.service';
 import { WhereOptions, InferAttributes, WhereAttributeHashValue, Op } from 'sequelize';
 import { ActivitiesModel } from '../models/activities/activities.model';
@@ -313,6 +313,23 @@ export async function getActivePlayers(req: Request, res: Response) {
         res.status(200).json(players);
     } catch (error) {
         res.status(400).json({ message: `Error getting active players: ${error}` });
+    }
+}
+
+export async function getPlayerStatsByPlayerName(req: Request, res: Response) {
+    try {
+        const { playerName } = req.params;
+        const { gameId } = req.query;
+
+        if (!gameId || !playerName) {
+            res.status(400).json({ message: 'Missing required parameters: gameId and/or playerName' });
+            return;
+        }
+
+        const stats = await generatePlayerStatsByPlayerName(gameId as string, playerName);
+        res.status(200).json(stats);
+    } catch (error) {
+        res.status(400).json({ message: `Error getting player stats: ${error}` });
     }
 }
 

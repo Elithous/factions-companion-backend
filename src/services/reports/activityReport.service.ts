@@ -2,6 +2,7 @@ import { InferAttributes, WhereOptions } from "sequelize";
 import { ActivitiesModel } from "../../models/activities/activities.model";
 import { cacheReport, getCachedReport, ReportType } from "./reportCache.service";
 import { sequelize } from "../../controllers/database.controller";
+import { getSetting } from "../settings.service";
 
 export async function generateSoldierStatsByFaction(filter?: WhereOptions<InferAttributes<ActivitiesModel>>) {
     if (!filter) filter = {};
@@ -147,4 +148,75 @@ export async function generatePlayerActionCounts(gameId: string, types: string[]
     await cacheReport(gameId, ReportType.PLAYER_ACTIONS, actionCounts, { types });
 
     return actionCounts;
+}
+
+type PlayerStats = {
+    playerName: string
+    buildActivities: {
+        type: 'building_built' | 'building_upgraded' | 'building_destroyed' | 'hq_upgraded'
+        name: string
+        level: number
+        timestamp: number
+    }[]
+    personalActivities: {
+        type: 'talent_picked' | 'spec_picked' | 'personal_project_picked'
+        name: string
+        category: string
+        tier: number
+        timestamp: number
+    }[]
+
+}
+
+export async function generatePlayerStatsByPlayerName(gameId: string, playerName: string) {
+    if ((await getSetting("hiddenPlayers"))?.includes(playerName)) {
+        return { error: 'player_hidden' };
+    }
+
+    const cachedData = await getCachedReport(gameId, ReportType.PLAYER_STATS, { playerName });
+    if (cachedData) {
+        return cachedData;
+    }
+
+    // Get relevant activities for "PlayerStats"
+    const activities = await ActivitiesModel.findAll({
+        where: {
+            game_id: gameId,
+            player_name: playerName,
+            type: [
+                'building_built', 'building_upgraded', 'building_destroyed', 'hq_upgraded',
+                'talent_picked', 'spec_picked', 'personal_project_picked'
+            ]
+        },
+        order: [['created_at', 'ASC']]
+    });
+
+    // Parse activities into PlayerStats structure
+    const buildActivities = activities
+        .filter(a => ['building_built', 'building_upgraded', 'building_destroyed', 'hq_upgraded'].includes(a.type))
+        .map(a => ({
+            type: a.type as 'building_built' | 'building_upgraded' | 'building_destroyed' | 'hq_upgraded',
+            name: a.name,
+            level: (a.data as any).level ?? null,
+            timestamp: a.created_at
+        }));
+
+    const personalActivities = activities
+        .filter(a => ['talent_picked', 'spec_picked', 'personal_project_picked'].includes(a.type))
+        .map(a => ({
+            type: a.type as 'talent_picked' | 'spec_picked' | 'personal_project_picked',
+            name: a.name,
+            category: (a.data as any).category ?? null,
+            tier: (a.data as any).tier ?? null,
+            timestamp: a.created_at
+        }));
+
+    const stats: PlayerStats = {
+        playerName,
+        buildActivities,
+        personalActivities
+    };
+
+    await cacheReport(gameId, ReportType.PLAYER_STATS, stats, { playerName });
+    return stats;
 }
