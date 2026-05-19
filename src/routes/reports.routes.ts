@@ -14,6 +14,7 @@ import {
     getPlayerStatsByPlayerName,
     getResourcesSentLeaderboard,
     getResourcesReceivedLeaderboard,
+    getBuildingKillLeaderboard,
 } from '../controllers/reports.controller';
 
 const router = express.Router();
@@ -39,5 +40,6 @@ router.get('/tile', getTileLeaderboard);
 router.get('/resources/sent', getResourcesSentLeaderboard);
 router.get('/resources/received', getResourcesReceivedLeaderboard);
 router.get('/activities/all', allActivities);
+router.get('/buildings/kills', getBuildingKillLeaderboard);
 
 export default router;

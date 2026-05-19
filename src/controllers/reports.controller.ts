@@ -3,7 +3,7 @@ import { generateSoldierStatsByFaction, generateSoldierStatsByTile, getAllActivi
 import { getAvailableGameIds, getConfig, getTimespan, getAllActivePlayers } from '../services/reports/gameReport.service';
 import { WhereOptions, InferAttributes, WhereAttributeHashValue, Op } from 'sequelize';
 import { ActivitiesModel } from '../models/activities/activities.model';
-import { generateApmLeaderboard, generatePlayerMvpLeaderboard, generateTileLeaderboard, generateResourcesSentLeaderboard, generateResourcesReceivedLeaderboard } from '../services/reports/leaderboardReport.service';
+import { generateApmLeaderboard, generatePlayerMvpLeaderboard, generateTileLeaderboard, generateResourcesSentLeaderboard, generateResourcesReceivedLeaderboard, generateBuildingKillsLeaderboard } from '../services/reports/leaderboardReport.service';
 
 export async function getSoldierStatsByFaction(req: Request, res: Response) {
     try {
@@ -378,10 +378,10 @@ export async function getResourcesSentLeaderboard(req: Request, res: Response) {
             output += '</script>';
             output += '<table>';
             output += '<tr><th>Rank</th><th>Player</th><th>Total Resources</th><th>Total Iron</th><th>Total Wood</th><th>Recipients</th></tr>';
-            
+
             stats.forEach((stat, index) => {
                 output += `<tr><td>${index + 1}</td><td>${stat.player}</td><td>${stat.totalResources}</td><td>${stat.totalIron}</td><td>${stat.totalWood}</td><td>`;
-                
+
                 // Add recipient breakdown
                 const recipients = Object.entries(stat.recipients);
                 if (recipients.length > 0) {
@@ -397,7 +397,7 @@ export async function getResourcesSentLeaderboard(req: Request, res: Response) {
                 } else {
                     output += 'None';
                 }
-                
+
                 output += '</td></tr>';
             });
             output += '</table>';
@@ -454,10 +454,10 @@ export async function getResourcesReceivedLeaderboard(req: Request, res: Respons
             output += '</script>';
             output += '<table>';
             output += '<tr><th>Rank</th><th>Player</th><th>Total Resources</th><th>Total Iron</th><th>Total Wood</th><th>Senders</th></tr>';
-            
+
             stats.forEach((stat, index) => {
                 output += `<tr><td>${index + 1}</td><td>${stat.recipient}</td><td>${stat.totalResources}</td><td>${stat.totalIron}</td><td>${stat.totalWood}</td><td>`;
-                
+
                 // Add sender breakdown
                 const senders = Object.entries(stat.senders);
                 if (senders.length > 0) {
@@ -473,8 +473,48 @@ export async function getResourcesReceivedLeaderboard(req: Request, res: Respons
                 } else {
                     output += 'None';
                 }
-                
+
                 output += '</td></tr>';
+            });
+            output += '</table>';
+
+            res.status(200).send(output);
+        }
+    } catch (error) {
+        res.status(400).json({ message: `Error getting resources received data: ${error}` });
+    }
+}
+
+export async function getBuildingKillLeaderboard(req: Request, res: Response) {
+    try {
+        const { gameId } = req.query;
+        const contentType = req.headers['accept'] || 'text/html';
+
+        if (!gameId) {
+            res.status(400).json({ message: 'Missing required parameter: gameId' });
+            return;
+        }
+
+        const stats = await generateBuildingKillsLeaderboard(gameId as string);
+
+        // Check if client wants JSON
+        if (contentType.includes('application/json')) {
+            res.status(200).json(stats);
+        } else {
+            // Default to HTML response
+            let output = '<h2>Building Kill Leaderboard</h2>';
+            output += '<p>(Total Soldiers/Workers removed by each Building)</p>';
+            output += '<style>';
+            output += 'table { border-collapse: collapse; width: 100%; }';
+            output += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
+            output += 'th { background-color: #f2f2f2; }';
+            output += 'tr:nth-child(even) { background-color: #f9f9f9; }';
+            output += 'tr:hover { background-color: #f1f1f1; }';
+            output += '</style>';
+            output += '<table>';
+            output += '<tr><th>Rank</th><th>Type</th><th>Color</th><th>X, Y</th><th>Kills</th></tr>';
+            stats.forEach((stat: any, index) => {
+                output += `<tr><td>${index + 1}</td><td>${stat.building}</td><td>${stat.player_faction}</td><td>${stat.x},${stat.y}</td><td>${stat.kills}</td></tr>`;
             });
             output += '</table>';
 

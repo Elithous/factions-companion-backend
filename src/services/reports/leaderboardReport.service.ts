@@ -1,4 +1,6 @@
+import { QueryTypes } from "sequelize";
 import { apiFetch } from "../../controllers/api.controller";
+import { sequelize } from "../../controllers/database.controller";
 import { ActivitiesModel } from "../../models/activities/activities.model";
 import { cacheReport, getCachedReport, ReportType } from "./reportCache.service";
 
@@ -332,5 +334,30 @@ export async function generateResourcesReceivedLeaderboard(gameId: string) {
     await cacheReport(gameId, ReportType.RESOURCES_RECEIVED, sortedLeaderboard);
 
     return sortedLeaderboard;
+}
+
+export async function generateBuildingKillsLeaderboard(gameId: string) {
+    // Check cache first
+    const cachedData = await getCachedReport(gameId, ReportType.BUILDING_KILLS);
+    if (cachedData) {
+        return cachedData;
+    }
+
+    const killData = await sequelize.query(`
+        SELECT x.x, x.y, x.player_faction, x.support_type as building,
+            SUM(IFNULL(data->>'$.soldiers_destroyed', data->>'$.fortification_removed')) kills
+        FROM activities x
+        WHERE game_id = :gameId and type = 'map_building_activated'
+        GROUP BY x, y, building, player_faction
+        ORDER BY kills desc
+        `, {
+            replacements: { gameId },
+            type: QueryTypes.SELECT
+        });
+
+    // Cache the results
+    await cacheReport(gameId, ReportType.BUILDING_KILLS, killData);
+
+    return killData;
 }
 
