@@ -144,7 +144,13 @@ export class ActivitiesModel extends BaseModel<InferAttributes<ActivitiesModel>,
         return {
             ...super.modelOptions(),
             modelName: 'Activities',
-            tableName: 'activities'
+            tableName: 'activities',
+            indexes: [
+                { fields: ['game_id'] },
+                { fields: ['player_id'] },
+                { fields: ['type'] },
+                { fields: ['x', 'y'] }
+            ]
         }
     }
 

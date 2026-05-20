@@ -3,7 +3,7 @@ import { generateSoldierStatsByFaction, generateSoldierStatsByTile, getAllActivi
 import { getAvailableGameIds, getConfig, getTimespan, getAllActivePlayers } from '../services/reports/gameReport.service';
 import { WhereOptions, InferAttributes, WhereAttributeHashValue, Op } from 'sequelize';
 import { ActivitiesModel } from '../models/activities/activities.model';
-import { generateApmLeaderboard, generatePlayerMvpLeaderboard, generateTileLeaderboard, generateResourcesSentLeaderboard, generateResourcesReceivedLeaderboard, generateBuildingKillsLeaderboard } from '../services/reports/leaderboardReport.service';
+import { generateApmLeaderboard, generatePlayerMvpLeaderboard, generateTileLeaderboard, generateResourcesSentLeaderboard, generateResourcesReceivedLeaderboard, generateBuildingKillsLeaderboard, generateBuildingPillageLeaderboard, generateBuildingPlacementLeaderboard, generateBuildingSupplyLeaderboard } from '../services/reports/leaderboardReport.service';
 
 export async function getSoldierStatsByFaction(req: Request, res: Response) {
     try {
@@ -521,6 +521,120 @@ export async function getBuildingKillLeaderboard(req: Request, res: Response) {
             res.status(200).send(output);
         }
     } catch (error) {
-        res.status(400).json({ message: `Error getting resources received data: ${error}` });
+        res.status(400).json({ message: `Error getting building kill data: ${error}` });
+    }
+}
+
+export async function getBuildingPillageLeaderboard(req: Request, res: Response) {
+    try {
+        const { gameId } = req.query;
+        const contentType = req.headers['accept'] || 'text/html';
+
+        if (!gameId) {
+            res.status(400).json({ message: 'Missing required parameter: gameId' });
+            return;
+        }
+
+        const stats = await generateBuildingPillageLeaderboard(gameId as string);
+
+        if (contentType.includes('application/json')) {
+            res.status(200).json(stats);
+        } else {
+            let output = '<h2>Building Pillage Leaderboard</h2>';
+            output += '<p>(Buildings pillaged by player)</p>';
+            output += '<style>';
+            output += 'table { border-collapse: collapse; width: 100%; }';
+            output += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
+            output += 'th { background-color: #f2f2f2; }';
+            output += 'tr:nth-child(even) { background-color: #f9f9f9; }';
+            output += 'tr:hover { background-color: #f1f1f1; }';
+            output += '</style>';
+            output += '<table>';
+            output += '<tr><th>Rank</th><th>Player</th><th>Pillaged</th></tr>';
+            stats.forEach((stat: any, index) => {
+                output += `<tr><td>${index + 1}</td><td>${stat.player ?? ''}</td><td>${stat.pillaged ?? ''}</td></tr>`;
+            });
+            output += '</table>';
+
+            res.status(200).send(output);
+        }
+    } catch (error) {
+        res.status(400).json({ message: `Error getting building pillage data: ${error}` });
+    }
+}
+
+export async function getBuildingPlacementLeaderboard(req: Request, res: Response) {
+    try {
+        const { gameId } = req.query;
+        const contentType = req.headers['accept'] || 'text/html';
+
+        if (!gameId) {
+            res.status(400).json({ message: 'Missing required parameter: gameId' });
+            return;
+        }
+
+        const stats = await generateBuildingPlacementLeaderboard(gameId as string);
+
+        if (contentType.includes('application/json')) {
+            res.status(200).json(stats);
+        } else {
+            let output = '<h2>Building Placement Leaderboard</h2>';
+            output += '<p>(Map buildings placed by player)</p>';
+            output += '<style>';
+            output += 'table { border-collapse: collapse; width: 100%; }';
+            output += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
+            output += 'th { background-color: #f2f2f2; }';
+            output += 'tr:nth-child(even) { background-color: #f9f9f9; }';
+            output += 'tr:hover { background-color: #f1f1f1; }';
+            output += '</style>';
+            output += '<table>';
+            output += '<tr><th>Rank</th><th>Player</th><th>Placements</th></tr>';
+            stats.forEach((stat: any, index) => {
+                output += `<tr><td>${index + 1}</td><td>${stat.player ?? ''}</td><td>${stat.placements ?? ''}</td></tr>`;
+            });
+            output += '</table>';
+
+            res.status(200).send(output);
+        }
+    } catch (error) {
+        res.status(400).json({ message: `Error getting building placement data: ${error}` });
+    }
+}
+
+export async function getBuildingSupplyLeaderboard(req: Request, res: Response) {
+    try {
+        const { gameId } = req.query;
+        const contentType = req.headers['accept'] || 'text/html';
+
+        if (!gameId) {
+            res.status(400).json({ message: 'Missing required parameter: gameId' });
+            return;
+        }
+
+        const stats = await generateBuildingSupplyLeaderboard(gameId as string);
+
+        if (contentType.includes('application/json')) {
+            res.status(200).json(stats);
+        } else {
+            let output = '<h2>Building Supply Leaderboard</h2>';
+            output += '<p>(Supply provided by map buildings)</p>';
+            output += '<style>';
+            output += 'table { border-collapse: collapse; width: 100%; }';
+            output += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
+            output += 'th { background-color: #f2f2f2; }';
+            output += 'tr:nth-child(even) { background-color: #f9f9f9; }';
+            output += 'tr:hover { background-color: #f1f1f1; }';
+            output += '</style>';
+            output += '<table>';
+            output += '<tr><th>Rank</th><th>Player</th><th>Supply</th></tr>';
+            stats.forEach((stat: any, index) => {
+                output += `<tr><td>${index + 1}</td><td>${stat.player ?? ''}</td><td>${stat.supply ?? ''}</td></tr>`;
+            });
+            output += '</table>';
+
+            res.status(200).send(output);
+        }
+    } catch (error) {
+        res.status(400).json({ message: `Error getting building supply data: ${error}` });
     }
 }

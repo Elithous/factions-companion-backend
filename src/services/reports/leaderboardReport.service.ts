@@ -361,3 +361,45 @@ export async function generateBuildingKillsLeaderboard(gameId: string) {
     return killData;
 }
 
+export async function generateBuildingPillageLeaderboard(gameId: string) {
+    const cachedData = await getCachedReport(gameId, ReportType.BUILDING_PILLAGED);
+    if (cachedData) {
+        return cachedData;
+    }
+
+    const data: unknown[] = [];
+    // TODO: implement building pillage leaderboard query
+
+    await cacheReport(gameId, ReportType.BUILDING_PILLAGED, data);
+
+    return data;
+}
+
+export async function generateBuildingPlacementLeaderboard(gameId: string) {
+    const cachedData = await getCachedReport(gameId, ReportType.BUILDING_PLACEMENT);
+    if (cachedData) {
+        return cachedData;
+    }
+
+    const data: unknown[] = [];
+    // TODO: implement building placement leaderboard query
+
+    await cacheReport(gameId, ReportType.BUILDING_PLACEMENT, data);
+
+    return data;
+}
+
+export async function generateBuildingSupplyLeaderboard(gameId: string) {
+    const cachedData = await getCachedReport(gameId, ReportType.BUILDING_SUPPLY);
+    if (cachedData) {
+        return cachedData;
+    }
+
+    const data: unknown[] = [];
+    // TODO: implement building supply leaderboard query
+
+    await cacheReport(gameId, ReportType.BUILDING_SUPPLY, data);
+
+    return data;
+}
+

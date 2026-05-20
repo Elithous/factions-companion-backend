@@ -15,6 +15,9 @@ import {
     getResourcesSentLeaderboard,
     getResourcesReceivedLeaderboard,
     getBuildingKillLeaderboard,
+    getBuildingPillageLeaderboard,
+    getBuildingPlacementLeaderboard,
+    getBuildingSupplyLeaderboard,
 } from '../controllers/reports.controller';
 
 const router = express.Router();
@@ -41,5 +44,8 @@ router.get('/resources/sent', getResourcesSentLeaderboard);
 router.get('/resources/received', getResourcesReceivedLeaderboard);
 router.get('/activities/all', allActivities);
 router.get('/buildings/kills', getBuildingKillLeaderboard);
+router.get('/buildings/pillaged', getBuildingPillageLeaderboard);
+router.get('/buildings/placement', getBuildingPlacementLeaderboard);
+router.get('/buildings/supply', getBuildingSupplyLeaderboard);
 
 export default router;
