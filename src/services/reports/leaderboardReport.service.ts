@@ -591,14 +591,132 @@ export async function generateBuildingPlacementLeaderboard(gameId: string) {
     return data;
 }
 
+type BuildingSupplyEventRow = {
+    player_id: number | null;
+    player_name: string | null;
+    x: number | null;
+    y: number | null;
+    building: string | null;
+    color: string | null;
+    iron: number | null;
+    wood: number | null;
+    workers: number | null;
+};
+
+export type BuildingSupplyLocationEntry = {
+    x: number;
+    y: number;
+    building: string;
+    color: string;
+    totalIron: number;
+    totalWood: number;
+    totalWorkers: number;
+    totalResources: number;
+    eventCount: number;
+};
+
+export type BuildingSupplyLeaderboardEntry = {
+    player_id: number | null;
+    player: string;
+    totalIron: number;
+    totalWood: number;
+    totalWorkers: number;
+    totalResources: number;
+    eventCount: number;
+    locations: BuildingSupplyLocationEntry[];
+};
+
 export async function generateBuildingSupplyLeaderboard(gameId: string) {
     const cachedData = await getCachedReport(gameId, ReportType.BUILDING_SUPPLY);
     if (cachedData) {
         return cachedData;
     }
 
-    const data: unknown[] = [];
-    // TODO: implement building supply leaderboard query
+    const supplyEvents = await sequelize.query<BuildingSupplyEventRow>(`
+        SELECT
+            player_id,
+            player_name,
+            x,
+            y,
+            name AS building,
+            tile_faction AS color,
+            CAST(IFNULL(data->>'$.iron', 0) AS UNSIGNED) AS iron,
+            CAST(IFNULL(data->>'$.wood', 0) AS UNSIGNED) AS wood,
+            CAST(IFNULL(data->>'$.workers', 0) AS UNSIGNED) AS workers
+        FROM activities
+        WHERE game_id = :gameId
+            AND type = 'map_building_supplied'
+        `, {
+        replacements: { gameId },
+        type: QueryTypes.SELECT
+    });
+
+    const byPlayer = new Map<string, BuildingSupplyLeaderboardEntry & { locationMap: Map<string, BuildingSupplyLocationEntry> }>();
+
+    for (const event of supplyEvents) {
+        const iron = Number(event.iron) || 0;
+        const wood = Number(event.wood) || 0;
+        const workers = Number(event.workers) || 0;
+        const resources = iron + wood + workers;
+        const playerId = event.player_id ?? null;
+        const playerName = event.player_name ?? 'unknown';
+        const groupKey = playerId !== null ? `id:${playerId}` : `name:${playerName}`;
+        const x = Number(event.x) || 0;
+        const y = Number(event.y) || 0;
+        const color = event.color ?? 'unknown';
+        const building = event.building ?? 'unknown';
+        const locationKey = `${x},${y},${building},${color}`;
+
+        if (!byPlayer.has(groupKey)) {
+            byPlayer.set(groupKey, {
+                player_id: playerId,
+                player: playerName,
+                totalIron: 0,
+                totalWood: 0,
+                totalWorkers: 0,
+                totalResources: 0,
+                eventCount: 0,
+                locations: [],
+                locationMap: new Map()
+            });
+        }
+
+        const entry = byPlayer.get(groupKey)!;
+        entry.totalIron += iron;
+        entry.totalWood += wood;
+        entry.totalWorkers += workers;
+        entry.totalResources += resources;
+        entry.eventCount += 1;
+
+        if (!entry.locationMap.has(locationKey)) {
+            entry.locationMap.set(locationKey, {
+                x,
+                y,
+                building,
+                color,
+                totalIron: 0,
+                totalWood: 0,
+                totalWorkers: 0,
+                totalResources: 0,
+                eventCount: 0
+            });
+        }
+
+        const location = entry.locationMap.get(locationKey)!;
+        location.totalIron += iron;
+        location.totalWood += wood;
+        location.totalWorkers += workers;
+        location.totalResources += resources;
+        location.eventCount += 1;
+    }
+
+    const data = Array.from(byPlayer.values())
+        .map(({ locationMap, ...entry }) => ({
+            ...entry,
+            locations: Array.from(locationMap.values())
+                .sort((a, b) => b.totalResources - a.totalResources || b.eventCount - a.eventCount)
+        }))
+        .sort((a, b) => b.totalResources - a.totalResources || b.eventCount - a.eventCount);
 
     await cacheReport(gameId, ReportType.BUILDING_SUPPLY, data);
 

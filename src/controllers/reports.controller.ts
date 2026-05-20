@@ -681,18 +681,50 @@ export async function getBuildingSupplyLeaderboard(req: Request, res: Response) 
             res.status(200).json(stats);
         } else {
             let output = '<h2>Building Supply Leaderboard</h2>';
-            output += '<p>(Supply provided by map buildings)</p>';
+            output += '<p>(Resources supplied to map buildings by player with breakdown by location)</p>';
             output += '<style>';
-            output += 'table { border-collapse: collapse; width: 100%; }';
+            output += 'table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }';
             output += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
             output += 'th { background-color: #f2f2f2; }';
             output += 'tr:nth-child(even) { background-color: #f9f9f9; }';
             output += 'tr:hover { background-color: #f1f1f1; }';
+            output += '.supply-location-table { display: none; margin-top: 10px; }';
+            output += '.supply-location-table.show { display: table; }';
+            output += '.toggle-btn { background: #007bff; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; }';
+            output += '.toggle-btn:hover { background: #0056b3; }';
             output += '</style>';
+            output += '<script>';
+            output += 'function toggleSupplyLocations(playerIndex) {';
+            output += '  const table = document.getElementById("supply-locations-" + playerIndex);';
+            output += '  const btn = document.getElementById("supply-btn-" + playerIndex);';
+            output += '  if (table.classList.contains("show")) {';
+            output += '    table.classList.remove("show");';
+            output += '    btn.textContent = "Show Locations";';
+            output += '  } else {';
+            output += '    table.classList.add("show");';
+            output += '    btn.textContent = "Hide Locations";';
+            output += '  }';
+            output += '}';
+            output += '</script>';
             output += '<table>';
-            output += '<tr><th>Rank</th><th>Player</th><th>Supply</th></tr>';
+            output += '<tr><th>Rank</th><th>Player</th><th>Events</th><th>Iron</th><th>Wood</th><th>Workers</th><th>Total</th><th>Locations</th></tr>';
             stats.forEach((stat: any, index) => {
-                output += `<tr><td>${index + 1}</td><td>${stat.player ?? ''}</td><td>${stat.supply ?? ''}</td></tr>`;
+                output += `<tr><td>${index + 1}</td><td>${stat.player ?? ''}</td><td>${stat.eventCount ?? 0}</td><td>${stat.totalIron ?? 0}</td><td>${stat.totalWood ?? 0}</td><td>${stat.totalWorkers ?? 0}</td><td>${stat.totalResources ?? 0}</td><td>`;
+
+                const locations = stat.locations ?? [];
+                if (locations.length > 0) {
+                    output += `<button id="supply-btn-${index}" class="toggle-btn" onclick="toggleSupplyLocations(${index})">Show Locations</button>`;
+                    output += `<table id="supply-locations-${index}" class="supply-location-table">`;
+                    output += '<tr><th>Building</th><th>Team</th><th>X</th><th>Y</th><th>Events</th><th>Iron</th><th>Wood</th><th>Workers</th><th>Total</th></tr>';
+                    locations.forEach((location: any) => {
+                        output += `<tr><td>${location.building ?? ''}</td><td>${location.color ?? ''}</td><td>${location.x ?? 0}</td><td>${location.y ?? 0}</td><td>${location.eventCount ?? 0}</td><td>${location.totalIron ?? 0}</td><td>${location.totalWood ?? 0}</td><td>${location.totalWorkers ?? 0}</td><td>${location.totalResources ?? 0}</td></tr>`;
+                    });
+                    output += '</table>';
+                } else {
+                    output += 'None';
+                }
+
+                output += '</td></tr>';
             });
             output += '</table>';
 
