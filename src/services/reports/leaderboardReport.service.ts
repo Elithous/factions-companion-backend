@@ -380,6 +380,7 @@ export type BuildingPillageLocationEntry = {
     totalWood: number;
     totalPillaged: number;
     eventCount: number;
+    pillageCount: number;
 };
 
 export type BuildingPillageLeaderboardEntry = {
@@ -388,6 +389,7 @@ export type BuildingPillageLeaderboardEntry = {
     totalWood: number;
     totalPillaged: number;
     eventCount: number;
+    pillageCount: number;
     locations: BuildingPillageLocationEntry[];
 };
 
@@ -438,6 +440,7 @@ export async function generateBuildingPillageLeaderboard(gameId: string) {
                 totalWood: 0,
                 totalPillaged: 0,
                 eventCount: 0,
+                pillageCount: 0,
                 locations: [],
                 locationMap: new Map()
             });
@@ -448,6 +451,9 @@ export async function generateBuildingPillageLeaderboard(gameId: string) {
         entry.totalWood += wood;
         entry.totalPillaged += iron + wood;
         entry.eventCount += 1;
+        if (iron + wood > 0) {
+            entry.pillageCount += 1;
+        }
 
         if (!entry.locationMap.has(locationKey)) {
             entry.locationMap.set(locationKey, {
@@ -457,7 +463,8 @@ export async function generateBuildingPillageLeaderboard(gameId: string) {
                 totalIron: 0,
                 totalWood: 0,
                 totalPillaged: 0,
-                eventCount: 0
+                eventCount: 0,
+                pillageCount: 0
             });
         }
 
@@ -466,6 +473,9 @@ export async function generateBuildingPillageLeaderboard(gameId: string) {
         location.totalWood += wood;
         location.totalPillaged += iron + wood;
         location.eventCount += 1;
+        if (iron + wood > 0) {
+            location.pillageCount += 1;
+        }
     }
 
     const data = Array.from(byPlayer.values())
@@ -474,14 +484,15 @@ export async function generateBuildingPillageLeaderboard(gameId: string) {
             locations: Array.from(locationMap.values())
                 .sort((a, b) =>
                     b.totalPillaged - a.totalPillaged ||
-                    b.eventCount - a.eventCount
+                    b.eventCount - a.eventCount ||
+                    b.pillageCount - a.pillageCount
                 )
         }))
         .sort((a, b) =>
             b.totalPillaged - a.totalPillaged ||
-            b.eventCount - a.eventCount
+            b.eventCount - a.eventCount ||
+            b.pillageCount - a.pillageCount
         );
-   
 
     await cacheReport(gameId, ReportType.BUILDING_PILLAGED, data);
 

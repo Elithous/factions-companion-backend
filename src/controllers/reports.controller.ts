@@ -567,17 +567,17 @@ export async function getBuildingPillageLeaderboard(req: Request, res: Response)
             output += '}';
             output += '</script>';
             output += '<table>';
-            output += '<tr><th>Rank</th><th>Player</th><th>Events</th><th>Iron</th><th>Wood</th><th>Total</th><th>Locations</th></tr>';
+            output += '<tr><th>Rank</th><th>Player</th><th>Events</th><th>Pillages</th><th>Iron</th><th>Wood</th><th>Total</th><th>Locations</th></tr>';
             stats.forEach((stat: any, index) => {
-                output += `<tr><td>${index + 1}</td><td>${stat.player ?? ''}</td><td>${stat.eventCount ?? 0}</td><td>${stat.totalIron ?? 0}</td><td>${stat.totalWood ?? 0}</td><td>${stat.totalPillaged ?? 0}</td><td>`;
+                output += `<tr><td>${index + 1}</td><td>${stat.player ?? ''}</td><td>${stat.eventCount ?? 0}</td><td>${stat.pillageCount ?? 0}</td><td>${stat.totalIron ?? 0}</td><td>${stat.totalWood ?? 0}</td><td>${stat.totalPillaged ?? 0}</td><td>`;
 
                 const locations = stat.locations ?? [];
                 if (locations.length > 0) {
                     output += `<button id="btn-${index}" class="toggle-btn" onclick="toggleLocations(${index})">Show Locations</button>`;
                     output += `<table id="locations-${index}" class="location-table">`;
-                    output += '<tr><th>Building</th><th>X</th><th>Y</th><th>Events</th><th>Iron</th><th>Wood</th><th>Total</th></tr>';
+                    output += '<tr><th>Building</th><th>X</th><th>Y</th><th>Events</th><th>Pillages</th><th>Iron</th><th>Wood</th><th>Total</th></tr>';
                     locations.forEach((location: any) => {
-                        output += `<tr><td>${location.building ?? ''}</td><td>${location.x ?? 0}</td><td>${location.y ?? 0}</td><td>${location.eventCount ?? 0}</td><td>${location.totalIron ?? 0}</td><td>${location.totalWood ?? 0}</td><td>${location.totalPillaged ?? 0}</td></tr>`;
+                        output += `<tr><td>${location.building ?? ''}</td><td>${location.x ?? 0}</td><td>${location.y ?? 0}</td><td>${location.eventCount ?? 0}</td><td>${location.pillageCount ?? 0}</td><td>${location.totalIron ?? 0}</td><td>${location.totalWood ?? 0}</td><td>${location.totalPillaged ?? 0}</td></tr>`;
                     });
                     output += '</table>';
                 } else {
