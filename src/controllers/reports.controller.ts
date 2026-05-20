@@ -541,18 +541,50 @@ export async function getBuildingPillageLeaderboard(req: Request, res: Response)
             res.status(200).json(stats);
         } else {
             let output = '<h2>Building Pillage Leaderboard</h2>';
-            output += '<p>(Buildings pillaged by player)</p>';
+            output += '<p>(Buildings pillaged by player with breakdown by location)</p>';
             output += '<style>';
-            output += 'table { border-collapse: collapse; width: 100%; }';
+            output += 'table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }';
             output += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
             output += 'th { background-color: #f2f2f2; }';
             output += 'tr:nth-child(even) { background-color: #f9f9f9; }';
             output += 'tr:hover { background-color: #f1f1f1; }';
+            output += '.location-table { display: none; margin-top: 10px; }';
+            output += '.location-table.show { display: table; }';
+            output += '.toggle-btn { background: #007bff; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; }';
+            output += '.toggle-btn:hover { background: #0056b3; }';
             output += '</style>';
+            output += '<script>';
+            output += 'function toggleLocations(playerIndex) {';
+            output += '  const table = document.getElementById("locations-" + playerIndex);';
+            output += '  const btn = document.getElementById("btn-" + playerIndex);';
+            output += '  if (table.classList.contains("show")) {';
+            output += '    table.classList.remove("show");';
+            output += '    btn.textContent = "Show Locations";';
+            output += '  } else {';
+            output += '    table.classList.add("show");';
+            output += '    btn.textContent = "Hide Locations";';
+            output += '  }';
+            output += '}';
+            output += '</script>';
             output += '<table>';
-            output += '<tr><th>Rank</th><th>Player</th><th>Pillaged</th></tr>';
+            output += '<tr><th>Rank</th><th>Player</th><th>Events</th><th>Iron</th><th>Wood</th><th>Total</th><th>Locations</th></tr>';
             stats.forEach((stat: any, index) => {
-                output += `<tr><td>${index + 1}</td><td>${stat.player ?? ''}</td><td>${stat.pillaged ?? ''}</td></tr>`;
+                output += `<tr><td>${index + 1}</td><td>${stat.player ?? ''}</td><td>${stat.eventCount ?? 0}</td><td>${stat.totalIron ?? 0}</td><td>${stat.totalWood ?? 0}</td><td>${stat.totalPillaged ?? 0}</td><td>`;
+
+                const locations = stat.locations ?? [];
+                if (locations.length > 0) {
+                    output += `<button id="btn-${index}" class="toggle-btn" onclick="toggleLocations(${index})">Show Locations</button>`;
+                    output += `<table id="locations-${index}" class="location-table">`;
+                    output += '<tr><th>Building</th><th>X</th><th>Y</th><th>Events</th><th>Iron</th><th>Wood</th><th>Total</th></tr>';
+                    locations.forEach((location: any) => {
+                        output += `<tr><td>${location.building ?? ''}</td><td>${location.x ?? 0}</td><td>${location.y ?? 0}</td><td>${location.eventCount ?? 0}</td><td>${location.totalIron ?? 0}</td><td>${location.totalWood ?? 0}</td><td>${location.totalPillaged ?? 0}</td></tr>`;
+                    });
+                    output += '</table>';
+                } else {
+                    output += 'None';
+                }
+
+                output += '</td></tr>';
             });
             output += '</table>';
 

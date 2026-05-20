@@ -361,14 +361,127 @@ export async function generateBuildingKillsLeaderboard(gameId: string) {
     return killData;
 }
 
+type BuildingPillageEventRow = {
+    player_name: string | null;
+    tile_player: string | null;
+    pillage_type: string;
+    x: number | null;
+    y: number | null;
+    building: string | null;
+    pillaged_iron: number | null;
+    pillaged_wood: number | null;
+};
+
+export type BuildingPillageLocationEntry = {
+    x: number;
+    y: number;
+    building: string;
+    totalIron: number;
+    totalWood: number;
+    totalPillaged: number;
+    eventCount: number;
+};
+
+export type BuildingPillageLeaderboardEntry = {
+    player: string;
+    totalIron: number;
+    totalWood: number;
+    totalPillaged: number;
+    eventCount: number;
+    locations: BuildingPillageLocationEntry[];
+};
+
 export async function generateBuildingPillageLeaderboard(gameId: string) {
     const cachedData = await getCachedReport(gameId, ReportType.BUILDING_PILLAGED);
     if (cachedData) {
         return cachedData;
     }
 
-    const data: unknown[] = [];
-    // TODO: implement building pillage leaderboard query
+    const pillageEvents = await sequelize.query<BuildingPillageEventRow>(`
+        SELECT
+            prev.player_name,
+            pillage.tile_player,
+            pillage.type AS pillage_type,
+            pillage.x,
+            pillage.y,
+            pillage.name AS building,
+            CAST(IFNULL(pillage.data->>'$.pillaged_iron', 0) AS UNSIGNED) AS pillaged_iron,
+            CAST(IFNULL(pillage.data->>'$.pillaged_wood', 0) AS UNSIGNED) AS pillaged_wood
+        FROM activities pillage
+        JOIN activities prev ON prev.id = pillage.id - 1 AND prev.game_id = pillage.game_id
+        WHERE pillage.game_id = :gameId
+            AND pillage.type IN ('map_building_decayed', 'map_building_contested', 'map_building_destroyed')
+        `, {
+        replacements: { gameId },
+        type: QueryTypes.SELECT
+    });
+
+    const byPlayer = new Map<string, BuildingPillageLeaderboardEntry & { locationMap: Map<string, BuildingPillageLocationEntry> }>();
+
+    for (const event of pillageEvents) {
+        const iron = Number(event.pillaged_iron) || 0;
+        const wood = Number(event.pillaged_wood) || 0;
+        const isContested = event.pillage_type === 'map_building_contested';
+        const playerName = isContested
+            ? (event.player_name ?? 'unknown')
+            : (event.tile_player ?? 'unknown');
+        const groupKey = playerName;
+        const x = Number(event.x) || 0;
+        const y = Number(event.y) || 0;
+        const building = event.building ?? 'unknown';
+        const locationKey = `${x},${y},${building}`;
+
+        if (!byPlayer.has(groupKey)) {
+            byPlayer.set(groupKey, {
+                player: playerName,
+                totalIron: 0,
+                totalWood: 0,
+                totalPillaged: 0,
+                eventCount: 0,
+                locations: [],
+                locationMap: new Map()
+            });
+        }
+
+        const entry = byPlayer.get(groupKey)!;
+        entry.totalIron += iron;
+        entry.totalWood += wood;
+        entry.totalPillaged += iron + wood;
+        entry.eventCount += 1;
+
+        if (!entry.locationMap.has(locationKey)) {
+            entry.locationMap.set(locationKey, {
+                x,
+                y,
+                building,
+                totalIron: 0,
+                totalWood: 0,
+                totalPillaged: 0,
+                eventCount: 0
+            });
+        }
+
+        const location = entry.locationMap.get(locationKey)!;
+        location.totalIron += iron;
+        location.totalWood += wood;
+        location.totalPillaged += iron + wood;
+        location.eventCount += 1;
+    }
+
+    const data = Array.from(byPlayer.values())
+        .map(({ locationMap, ...entry }) => ({
+            ...entry,
+            locations: Array.from(locationMap.values())
+                .sort((a, b) =>
+                    b.totalPillaged - a.totalPillaged ||
+                    b.eventCount - a.eventCount
+                )
+        }))
+        .sort((a, b) =>
+            b.totalPillaged - a.totalPillaged ||
+            b.eventCount - a.eventCount
+        );
+   
 
     await cacheReport(gameId, ReportType.BUILDING_PILLAGED, data);
 
