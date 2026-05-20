@@ -499,14 +499,92 @@ export async function generateBuildingPillageLeaderboard(gameId: string) {
     return data;
 }
 
+type BuildingPlacementEventRow = {
+    player_id: number | null;
+    player_name: string | null;
+    x: number | null;
+    y: number | null;
+    building: string | null;
+};
+
+export type BuildingPlacementLocationEntry = {
+    x: number;
+    y: number;
+    building: string;
+    count: number;
+};
+
+export type BuildingPlacementLeaderboardEntry = {
+    player_id: number | null;
+    player: string;
+    placements: number;
+    locations: BuildingPlacementLocationEntry[];
+};
+
 export async function generateBuildingPlacementLeaderboard(gameId: string) {
     const cachedData = await getCachedReport(gameId, ReportType.BUILDING_PLACEMENT);
     if (cachedData) {
         return cachedData;
     }
 
-    const data: unknown[] = [];
-    // TODO: implement building placement leaderboard query
+    const placementEvents = await sequelize.query<BuildingPlacementEventRow>(`
+        SELECT
+            player_id,
+            player_name,
+            x,
+            y,
+            name AS building
+        FROM activities
+        WHERE game_id = :gameId
+            AND type = 'map_building_started'
+        `, {
+        replacements: { gameId },
+        type: QueryTypes.SELECT
+    });
+
+    const byPlayer = new Map<string, BuildingPlacementLeaderboardEntry & { locationMap: Map<string, BuildingPlacementLocationEntry> }>();
+
+    for (const event of placementEvents) {
+        const playerId = event.player_id ?? null;
+        const playerName = event.player_name ?? 'unknown';
+        const groupKey = playerId !== null ? `id:${playerId}` : `name:${playerName}`;
+        const x = Number(event.x) || 0;
+        const y = Number(event.y) || 0;
+        const building = event.building ?? 'unknown';
+        const locationKey = `${x},${y},${building}`;
+
+        if (!byPlayer.has(groupKey)) {
+            byPlayer.set(groupKey, {
+                player_id: playerId,
+                player: playerName,
+                placements: 0,
+                locations: [],
+                locationMap: new Map()
+            });
+        }
+
+        const entry = byPlayer.get(groupKey)!;
+        entry.placements += 1;
+
+        if (!entry.locationMap.has(locationKey)) {
+            entry.locationMap.set(locationKey, {
+                x,
+                y,
+                building,
+                count: 0
+            });
+        }
+
+        entry.locationMap.get(locationKey)!.count += 1;
+    }
+
+    const data = Array.from(byPlayer.values())
+        .map(({ locationMap, ...entry }) => ({
+            ...entry,
+            locations: Array.from(locationMap.values())
+                .sort((a, b) => b.count - a.count || a.building.localeCompare(b.building))
+        }))
+        .sort((a, b) => b.placements - a.placements || a.player.localeCompare(b.player));
 
     await cacheReport(gameId, ReportType.BUILDING_PLACEMENT, data);
 
