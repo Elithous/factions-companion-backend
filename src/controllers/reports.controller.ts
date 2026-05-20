@@ -206,7 +206,7 @@ export async function getTileLeaderboard(req: Request, res: Response) {
         } else {
             // Default to HTML response
             let output = '<h2>Tile Ownership Leaderboard</h2>';
-            output += '<p>(Maximum concurrent tiles captured by the player)</p>';
+            output += '<p>(Maximum concurrent tiles and total tiles ever owned by each player)</p>';
             output += '<style>';
             output += 'table { border-collapse: collapse; width: 100%; }';
             output += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
@@ -215,9 +215,9 @@ export async function getTileLeaderboard(req: Request, res: Response) {
             output += 'tr:hover { background-color: #f1f1f1; }';
             output += '</style>';
             output += '<table>';
-            output += '<tr><th>Rank</th><th>Player</th><th>Tiles Captured</th><th>Percentage</th></tr>';
+            output += '<tr><th>Rank</th><th>Player</th><th>Max Concurrent</th><th>Percentage</th><th>Total Ever Owned</th><th>Percentage</th></tr>';
             stats.forEach((stat, index) => {
-                output += `<tr><td>${index + 1}</td><td>${stat[0]}</td><td>${stat[1]}</td><td>${stat[2]}</td></tr>`;
+                output += `<tr><td>${index + 1}</td><td>${stat[0]}</td><td>${stat[1]}</td><td>${stat[2]}</td><td>${stat[3]}</td><td>${stat[4]}</td></tr>`;
             });
             output += '</table>';
 

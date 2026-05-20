@@ -125,52 +125,59 @@ export async function generateTileLeaderboard(gameId: string) {
         order: ['updated_at']
     });
 
-    // Track current and max tile counts for each player
+    // Track current, max concurrent, and all-time tile ownership per player
     const playerTileCounts: { [player: string]: Set<string> } = {};
+    const playerEverOwnedTiles: { [player: string]: Set<string> } = {};
     const playerMaxTiles: { [player: string]: number } = {};
 
     // Process updates chronologically to track ownership
     for (const update of allTileUpdates) {
-        // Initialize player sets if needed
-        if (!playerTileCounts[update.player_name]) {
-            playerTileCounts[update.player_name] = new Set();
+        const playerName = update.player_name;
+        const tileKey = `${update.x},${update.y}`;
+
+        if (!playerTileCounts[playerName]) {
+            playerTileCounts[playerName] = new Set();
+        }
+        if (!playerEverOwnedTiles[playerName]) {
+            playerEverOwnedTiles[playerName] = new Set();
         }
 
-        // Add tile to player's set
-        const tileKey = `${update.x},${update.y}`;
+        playerEverOwnedTiles[playerName].add(tileKey);
 
         // Remove tile from previous owner's set if it exists
         for (const [player, tiles] of Object.entries(playerTileCounts)) {
-            if (player !== update.player_name && tiles.delete(tileKey)) {
-                break; // Exit once we find and remove the tile
+            if (player !== playerName && tiles.delete(tileKey)) {
+                break;
             }
         }
 
-        // Add to new owner's set
-        playerTileCounts[update.player_name].add(tileKey);
+        playerTileCounts[playerName].add(tileKey);
 
-        // Update max tile count for this player
-        const currentCount = playerTileCounts[update.player_name].size;
-        playerMaxTiles[update.player_name] = Math.max(
+        const currentCount = playerTileCounts[playerName].size;
+        playerMaxTiles[playerName] = Math.max(
             currentCount,
-            playerMaxTiles[update.player_name] || 0
+            playerMaxTiles[playerName] || 0
         );
     }
 
-    // Sort players by their max tile count
     const sortedLeaderboard = Object.entries(playerMaxTiles)
         .sort((a, b) => b[1] - a[1]);
-    // Calculate the total number of distinct tiles captured
+
     const allTiles = new Set<string>();
     Object.values(playerTileCounts).forEach(playerTiles => {
         playerTiles.forEach(tile => allTiles.add(tile));
     });
     const totalDistinctTiles = allTiles.size;
 
-    // Add percentage to each leaderboard entry
-    const leaderboardWithPercentage = sortedLeaderboard.map(([player, count]) => {
-        const percentage = totalDistinctTiles > 0 ? ((count as number) / totalDistinctTiles * 100).toFixed(1) : '0.0';
-        return [player, count, `${percentage}%`];
+    const leaderboardWithPercentage = sortedLeaderboard.map(([player, maxConcurrent]) => {
+        const distinctPercentage = totalDistinctTiles > 0
+            ? ((maxConcurrent as number) / totalDistinctTiles * 100).toFixed(1)
+            : '0.0';
+        const everOwned = playerEverOwnedTiles[player]?.size ?? 0;
+        const everOwnedPercentage = totalDistinctTiles > 0
+        ? (everOwned / totalDistinctTiles * 100).toFixed(1)
+        : '0.0';
+        return [player, maxConcurrent, `${distinctPercentage}%`, everOwned, `${everOwnedPercentage}%`];
     });
 
     // Cache the results
