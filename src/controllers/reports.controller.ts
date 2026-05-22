@@ -3,7 +3,7 @@ import { generateSoldierStatsByFaction, generateSoldierStatsByTile, getAllActivi
 import { getAvailableGameIds, getConfig, getTimespan, getAllActivePlayers } from '../services/reports/gameReport.service';
 import { WhereOptions, InferAttributes, WhereAttributeHashValue, Op } from 'sequelize';
 import { ActivitiesModel } from '../models/activities/activities.model';
-import { generateApmLeaderboard, generatePlayerMvpLeaderboard, generateTileLeaderboard, generateResourcesSentLeaderboard, generateResourcesReceivedLeaderboard, generateBuildingKillsLeaderboard, generateBuildingPillageLeaderboard, generateBuildingPlacementLeaderboard, generateBuildingSupplyLeaderboard } from '../services/reports/leaderboardReport.service';
+import { generateApmLeaderboard, generatePlayerMvpLeaderboard, generateTileLeaderboard, generateResourcesSentLeaderboard, generateResourcesReceivedLeaderboard, generateBuildingKillsLeaderboard, generateBuildingPillageLeaderboard, generateBuildingPlacementLeaderboard, generateBuildingSupplyLeaderboard, generatePlayerLootLeaderboard } from '../services/reports/leaderboardReport.service';
 
 export async function getSoldierStatsByFaction(req: Request, res: Response) {
     try {
@@ -69,6 +69,76 @@ export async function getSoliderStatsByTile(req: Request, res: Response) {
         res.status(200).send(stats);
     } catch (error) {
         res.status(400).json({ message: `Error getting soldier data: ${error}` });
+    }
+}
+
+export async function getPlayerLootLeaderboard(req: Request, res: Response) {
+    try {
+        const { gameId } = req.query;
+        const contentType = req.headers['accept'] || 'text/html';
+
+        if (!gameId) {
+            res.status(400).json({ message: 'Missing required parameter: gameId' });
+            return;
+        }
+
+        const stats = await generatePlayerLootLeaderboard(gameId as string);
+
+        if (contentType.includes('application/json')) {
+            res.status(200).json(stats);
+        } else {
+            let output = '<h2>Player Loot Leaderboard</h2>';
+            output += '<p>(Total victory points looted by each player)</p>';
+            output += '<style>';
+            output += 'table { border-collapse: collapse; width: 100%; }';
+            output += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
+            output += 'th { background-color: #f2f2f2; }';
+            output += 'tr:nth-child(even) { background-color: #f9f9f9; }';
+            output += 'tr:hover { background-color: #f1f1f1; }';
+            output += '.teams-table { display: none; margin-top: 10px; }';
+            output += '.teams-table.show { display: table; }';
+            output += '.toggle-btn { background: #007bff; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; }';
+            output += '.toggle-btn:hover { background: #0056b3; }';
+            output += '</style>';
+            output += '<script>';
+            output += 'function toggleTeams(playerIndex) {';
+            output += '  const table = document.getElementById("teams-" + playerIndex);';
+            output += '  const btn = document.getElementById("btn-" + playerIndex);';
+            output += '  if (table.classList.contains("show")) {';
+            output += '    table.classList.remove("show");';
+            output += '    btn.textContent = "Show Teams";';
+            output += '  } else {';
+            output += '    table.classList.add("show");';
+            output += '    btn.textContent = "Hide Teams";';
+            output += '  }';
+            output += '}';
+            output += '</script>';
+            output += '<table>';
+            output += '<tr><th>Rank</th><th>Player</th><th>Loot Events</th><th>Total VP</th><th>Teams</th></tr>';
+            stats.forEach((stat, index) => {
+                output += `<tr><td>${index + 1}</td><td>${stat.player}</td><td>${stat.lootCount}</td><td>${stat.totalVp}</td><td>`;
+                
+                const teams = stat.teams ?? [];
+                if (teams.length > 0) {
+                    output += `<button id="btn-${index}" class="toggle-btn" onclick="toggleTeams(${index})">Show Teams</button>`;
+                    output += `<table id="teams-${index}" class="teams-table">`;
+                    output += '<tr><th>Team</th><th>Loot Events</th><th>Total VP</th></tr>';
+                    teams.forEach(team => {
+                        output += `<tr><td>${team.team ?? ''}</td><td>${team.lootCount ?? 0}</td><td>${team.totalVp ?? 0}</td></tr>`;
+                    });
+                    output += '</table>';
+                } else {
+                    output += 'None';
+                }
+
+                output += '</td></tr>';
+            });
+            output += '</table>';
+
+            res.status(200).send(output);
+        }
+    } catch (error) {
+        res.status(400).json({ message: `Error getting player loot data: ${error}` });
     }
 }
 

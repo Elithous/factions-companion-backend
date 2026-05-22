@@ -3,6 +3,9 @@ import { apiFetch } from "../../controllers/api.controller";
 import { sequelize } from "../../controllers/database.controller";
 import { ActivitiesModel } from "../../models/activities/activities.model";
 import { cacheReport, getCachedReport, ReportType } from "./reportCache.service";
+import { GameConfigModel } from "../../models/config.model";
+import { HqConfigModel } from "../../types/apiResponses/hq.type";
+import { FactionColor } from "../../types/faction.type";
 
 export async function generatePlayerMvpLeaderboard(gameId: string) {
     // Check cache first
@@ -726,6 +729,99 @@ export async function generateBuildingSupplyLeaderboard(gameId: string) {
         .sort((a, b) => b.totalResources - a.totalResources || b.eventCount - a.eventCount);
 
     await cacheReport(gameId, ReportType.BUILDING_SUPPLY, data);
+
+    return data;
+}
+
+
+export type PlayerLootTeamEntry = {
+    team: FactionColor;
+    totalVp: number;
+    lootCount: number;
+};
+
+export type PlayerLootLeaderboardEntry = {
+    player_id: number | null;
+    player: string;
+    totalVp: number;
+    lootCount: number;
+    teams: PlayerLootTeamEntry[];
+};
+
+export async function generatePlayerLootLeaderboard(gameId: string): Promise<PlayerLootLeaderboardEntry[]> {
+    const cachedData = await getCachedReport(gameId, ReportType.PLAYER_LOOT);
+    if (cachedData) {
+        return cachedData;
+    }
+
+    const lootActivities = await ActivitiesModel.findAll({
+        attributes: ['player_id', 'player_name', 'amount', 'x', 'y'],
+        where: {
+            game_id: gameId,
+            type: 'loot'
+        }
+    });
+
+    const teamHQs = (await GameConfigModel.findOne({
+        attributes: ['data'],
+        where: {
+            game_id: gameId
+        }
+    })).data.mapConfig.hqs_positions;
+
+    const hqByPositions: { [position: string]: keyof typeof teamHQs} = {};
+    Object.keys(teamHQs).forEach((team: FactionColor) =>
+        hqByPositions[`${teamHQs[team].x}:${teamHQs[team].y}`] = team)
+
+    const byPlayer = new Map<string, PlayerLootLeaderboardEntry & { teamMap: Map<string, PlayerLootTeamEntry> }>();
+
+    for (const loot of lootActivities) {
+        const x = Number(loot.x) || 0;
+        const y = Number(loot.y) || 0;
+        const vp = Number(loot.amount) || 0;
+        const playerId = loot.player_id ?? null;
+        const playerName = loot.player_name ?? 'unknown';
+        const groupKey = `${playerId}`;
+        const hqPositionKey = `${x}:${y}`;
+        const teamKey = hqByPositions[hqPositionKey];
+
+        if (!byPlayer.has(groupKey)) {
+            byPlayer.set(groupKey, {
+                player_id: playerId,
+                player: playerName,
+                totalVp: 0,
+                lootCount: 0,
+                teams: [],
+                teamMap: new Map()
+            });
+        }
+
+        const entry = byPlayer.get(groupKey)!;
+        entry.totalVp += vp;
+        entry.lootCount += 1;
+
+        if (!entry.teamMap.has(teamKey)) {
+            entry.teamMap.set(teamKey, {
+                team: teamKey,
+                totalVp: 0,
+                lootCount: 0
+            });
+        }
+
+        const team = entry.teamMap.get(teamKey);
+        team.totalVp += vp;
+        team.lootCount += 1;
+    }
+
+    const data = Array.from(byPlayer.values())
+        .map(({ teamMap, ...entry}) => ({
+            ...entry,
+            teams: Array.from(teamMap.values())
+                .sort((a, b) => b.totalVp - a.totalVp || b.lootCount - a.lootCount)
+        }))
+        .sort((a, b) => b.totalVp - a.totalVp || b.lootCount - a.lootCount);
+
+    await cacheReport(gameId, ReportType.PLAYER_LOOT, data);
 
     return data;
 }

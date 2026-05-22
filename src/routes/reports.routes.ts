@@ -18,6 +18,7 @@ import {
     getBuildingPillageLeaderboard,
     getBuildingPlacementLeaderboard,
     getBuildingSupplyLeaderboard,
+    getPlayerLootLeaderboard,
 } from '../controllers/reports.controller';
 
 const router = express.Router();
@@ -28,6 +29,7 @@ router.get('/player/apm', getPlayerApmLeaderboard);
 router.get('/player/actions', getPlayerActionCounts);
 router.get('/player/active', getActivePlayers);
 router.get('/player/stats/:playerName', getPlayerStatsByPlayerName);
+router.get('/player/loot', getPlayerLootLeaderboard);
 
 // Soldier-related routes
 router.get('/soldiers/faction', getSoldierStatsByFaction);

@@ -16,7 +16,8 @@ export enum ReportType {
     BUILDING_KILLS = "building_kills",
     BUILDING_PILLAGED = "building_pillaged",
     BUILDING_PLACEMENT = "building_placement",
-    BUILDING_SUPPLY = "building_supply"
+    BUILDING_SUPPLY = "building_supply",
+    PLAYER_LOOT = "player_loot"
 }
 
 // Default cache duration in milliseconds (1 hour)
