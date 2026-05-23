@@ -1,9 +1,27 @@
 import express, { Request, Response } from 'express';
-import { generateSoldierStatsByFaction, generateSoldierStatsByTile, getAllActivities, generatePlayerActionCounts, generatePlayerStatsByPlayerName } from "../services/reports/activityReport.service";
+import {
+    generateSoldierStatsByFaction,
+    generateSoldierStatsByTile,
+    getAllActivities,
+    generatePlayerActionCounts,
+    generatePlayerStatsByPlayerName,
+    generateLootActions
+} from "../services/reports/activityReport.service";
 import { getAvailableGameIds, getConfig, getTimespan, getAllActivePlayers } from '../services/reports/gameReport.service';
 import { WhereOptions, InferAttributes, WhereAttributeHashValue, Op } from 'sequelize';
 import { ActivitiesModel } from '../models/activities/activities.model';
-import { generateApmLeaderboard, generatePlayerMvpLeaderboard, generateTileLeaderboard, generateResourcesSentLeaderboard, generateResourcesReceivedLeaderboard, generateBuildingKillsLeaderboard, generateBuildingPillageLeaderboard, generateBuildingPlacementLeaderboard, generateBuildingSupplyLeaderboard, generatePlayerLootLeaderboard } from '../services/reports/leaderboardReport.service';
+import {
+    generateApmLeaderboard,
+    generatePlayerMvpLeaderboard,
+    generateTileLeaderboard,
+    generateResourcesSentLeaderboard,
+    generateResourcesReceivedLeaderboard,
+    generateBuildingKillsLeaderboard,
+    generateBuildingPillageLeaderboard,
+    generateBuildingPlacementLeaderboard,
+    generateBuildingSupplyLeaderboard,
+    generatePlayerLootLeaderboard
+} from '../services/reports/leaderboardReport.service';
 
 export async function getSoldierStatsByFaction(req: Request, res: Response) {
     try {
@@ -802,5 +820,110 @@ export async function getBuildingSupplyLeaderboard(req: Request, res: Response) 
         }
     } catch (error) {
         res.status(400).json({ message: `Error getting building supply data: ${error}` });
+    }
+}
+
+export async function getLootActions(req: Request, res: Response) {
+    try {
+        const { gameId } = req.query;
+        const contentType = req.headers['accept'] || 'text/html';
+
+        if (!gameId) {
+            res.status(400).json({ message: 'Missing required parameter: gameId' });
+            return;
+        }
+
+        const lootActions = await generateLootActions(gameId as string);
+
+        if (contentType.includes('application/json')) {
+            res.status(200).json(lootActions);
+        } else {
+            let output = '<h2>Loot Actions</h2>';
+            output += '<p>(Major looting operations, grouped by attacker/defender. Participants are sorted by VP contributed.)</p>';
+            output += '<style>';
+            output += 'table { border-collapse: collapse; width: 100%; margin-bottom: 32px; }';
+            output += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
+            output += 'th { background-color: #f2f2f2; }';
+            output += 'tr:nth-child(even) { background-color: #f9f9f9; }';
+            output += 'tr:hover { background-color: #f1f1f1; }';
+            output += '.loot-part-table { display: none; margin-top: 10px; }';
+            output += '.loot-part-table.show { display: table; }';
+            output += '.toggle-btn { background: #007bff; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 3px; margin-bottom: 4px;}';
+            output += '.toggle-btn:hover { background: #0056b3; }';
+            output += '</style>';
+            output += `<script>
+                function toggleLootParticipants(idx) {
+                    const table = document.getElementById("loot-participants-" + idx);
+                    const btn = document.getElementById("loot-btn-" + idx);
+                    if (table.classList.contains("show")) {
+                        table.classList.remove("show");
+                        btn.textContent = "Show Participants";
+                    } else {
+                        table.classList.add("show");
+                        btn.textContent = "Hide Participants";
+                    }
+                }
+            </script>`;
+            output += '<table>';
+            output += '<tr>' +
+                '<th>#</th>' +
+                '<th>Looting Team</th>' +
+                '<th>Looted HQ</th>' +
+                '<th>Participants</th>' +
+                '<th>VP</th>' +
+                '<th>Tiles Taken</th>' +
+                '<th>Soldiers</th>' +
+                '<th>Workers</th>' +
+                '<th>Supports</th>' +
+                '<th>Time</th>'+
+                '<th>Participants</th>' +
+            '</tr>';
+            lootActions.forEach((action: any, idx: number) => {
+                const startTime = action.startTime
+                    ? new Date(action.startTime * 1000).toLocaleString()
+                    : '';
+                const endTime = action.endTime
+                    ? new Date(action.endTime * 1000).toLocaleString()
+                    : '';
+
+                output += `<tr>`;
+                output += `<td>${idx + 1}</td>`; // #
+                output += `<td>${action.lootingTeam ?? ''}</td>`;
+                output += `<td>${action.lootedTeam ?? ''}</td>`;
+                output += `<td>${action.participants?.length ?? 0}</td>`;
+                output += `<td>${action.totalVp ?? 0}</td>`;
+                output += `<td>${action.totalTilesTaken ?? 0}</td>`;
+                output += `<td>${action.soldiersUsed ?? 0}</td>`;
+                output += `<td>${action.workersUsed ?? 0}</td>`;
+                output += `<td>${action.supportsUsed ?? 0}</td>`;
+                output += `<td>${startTime}${endTime && startTime !== endTime ? ` - ${endTime}` : ''}</td>`;
+                // Participants button & table
+                if (action.participants && action.participants.length > 0) {
+                    output += `<td><button id="loot-btn-${idx}" class="toggle-btn" onclick="toggleLootParticipants(${idx})">Show Participants</button>`;
+                    output += `<table id="loot-participants-${idx}" class="loot-part-table">`;
+                    output += '<tr><th>Rank</th><th>Player</th><th>VP</th><th>Tiles</th><th>Soldiers</th><th>Workers</th><th>Supports</th></tr>';
+                    action.participants.forEach((p: any, rank: number) => {
+                        output += `<tr>`;
+                        output += `<td>${rank + 1}</td>`;
+                        output += `<td>${p.playerName ?? ''}</td>`;
+                        output += `<td>${p.totalVp ?? 0}</td>`;
+                        output += `<td>${p.tilesTakenCount ?? 0}</td>`;
+                        output += `<td>${p.soldiersUsed ?? 0}</td>`;
+                        output += `<td>${p.workersUsed ?? 0}</td>`;
+                        output += `<td>${p.supportsUsed ?? 0}</td>`;
+                        output += `</tr>`;
+                    });
+                    output += '</table></td>';
+                } else {
+                    output += '<td>None</td>';
+                }
+                output += `</tr>`;
+            });
+            output += '</table>';
+
+            res.status(200).send(output);
+        }
+    } catch (error) {
+        res.status(400).json({ message: `Error getting loot actions: ${error}` });
     }
 }

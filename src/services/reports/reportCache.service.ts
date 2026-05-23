@@ -12,12 +12,13 @@ export enum ReportType {
     PLAYER_ACTIONS = "player_actions",
     RESOURCES_SENT = "resources_sent",
     RESOURCES_RECEIVED = "resources_received",
-    PLAYER_STATS = "PLAYER_STATS",
+    PLAYER_STATS = "player_stats",
     BUILDING_KILLS = "building_kills",
     BUILDING_PILLAGED = "building_pillaged",
     BUILDING_PLACEMENT = "building_placement",
     BUILDING_SUPPLY = "building_supply",
-    PLAYER_LOOT = "player_loot"
+    PLAYER_LOOT = "player_loot",
+    LOOT_ACTIONS = "loot_actions"
 }
 
 // Default cache duration in milliseconds (1 hour)

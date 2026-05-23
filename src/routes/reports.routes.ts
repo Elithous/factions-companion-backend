@@ -19,6 +19,7 @@ import {
     getBuildingPlacementLeaderboard,
     getBuildingSupplyLeaderboard,
     getPlayerLootLeaderboard,
+    getLootActions
 } from '../controllers/reports.controller';
 
 const router = express.Router();
@@ -42,6 +43,7 @@ router.get('/games/config', getGameConfig);
 
 // Other routes
 router.get('/tile', getTileLeaderboard);
+router.get('/loot/actions', getLootActions);
 router.get('/resources/sent', getResourcesSentLeaderboard);
 router.get('/resources/received', getResourcesReceivedLeaderboard);
 router.get('/activities/all', allActivities);
