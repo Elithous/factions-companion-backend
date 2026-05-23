@@ -381,7 +381,7 @@ export async function generateLootActions(gameId: string): Promise<LootAction[]>
 
         // Get all soldier and special unit actions within the timeframe AND on connected tiles only
         const tileActions = await ActivitiesModel.findAll({
-            attributes: ['id', 'x', 'y', 'player_id', 'player_name', 'amount', 'captured', 'type', 'support_type'],
+            attributes: ['id', 'x', 'y', 'player_id', 'player_name', 'amount', 'captured', 'type', 'support_type', 'created_at'],
             where: {
                 game_id: gameId,
                 player_faction: playerFaction,
