@@ -18,13 +18,13 @@
     "reconnecting-websocket": "^4.4.0",
     "sequelize": "^6.37.5",
     "tsx": "^4.7.2",
-    "ws": "git://github.com/Elithous/ws.git"
+    "ws": "^8.21.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/luxon": "^3.4.2",
     "@types/node": "^20.17.10",
-    "@types/ws": "^8.5.13",
+    "@types/ws": "^8.18.1",
     "typescript": "^5.7.2"
   }
 }

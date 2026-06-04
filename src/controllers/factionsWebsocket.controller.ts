@@ -7,9 +7,93 @@ import { saveAllCaseData, savePastActivities, updateMissingTileData } from "../s
 import { apiFetch } from "./api.controller";
 import { FactionsGame } from "../types/apiResponses/factionsGame.type";
 
+const WORLD_SOCKET_FACTIONS = ['RED', 'BLUE', 'GREEN', 'YELLOW'] as const;
+type WorldSocketFaction = (typeof WORLD_SOCKET_FACTIONS)[number];
+
 const worldSockets: { [gameId: string]: ReconnectingWebSocket } = {};
-const factionSocket: { [gameId: string]: ReconnectingWebSocket } = {};
+const worldSocketFactions: { [gameId: string]: WorldSocketFaction } = {};
+const worldSocketDiscovery: { [gameId: string]: Promise<WorldSocketFaction | null> } = {};
 const parseIntervals: { [gameId: string]: NodeJS.Timeout } = {};
+
+function buildWorldSocketUrl(gameId: string, faction: WorldSocketFaction) {
+    const authToken = process.env.AUTH_TOKEN;
+    return `${process.env.WS_BASE_URL}game/${gameId}/${faction}?token=${authToken}`;
+}
+
+function attachWorldSocketHandlers(ws: ReconnectingWebSocket) {
+    ws.addEventListener('error', (event) => {
+        console.log(event);
+    });
+
+    ws.addEventListener('message', (event) => {
+        const json = JSON.parse(event.data);
+
+        const message = JSON.stringify(json);
+        console.log(`Received message from server: ${message}`);
+
+        handleMessage('world_socket', json);
+    });
+}
+
+async function discoverValidFaction(gameId: string): Promise<WorldSocketFaction | null> {
+    return new Promise((resolve) => {
+        let settled = false;
+        let closedCount = 0;
+        const probeSockets: WebSocket[] = [];
+
+        const finish = (faction: WorldSocketFaction | null) => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            clearTimeout(timeout);
+            for (const socket of probeSockets) {
+                socket.removeAllListeners();
+                if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
+                    socket.close();
+                }
+            }
+            resolve(faction);
+        };
+
+        const timeout = setTimeout(() => {
+            console.error(`Timed out discovering faction websocket for game ${gameId}`);
+            finish(null);
+        }, 15000);
+
+        for (const faction of WORLD_SOCKET_FACTIONS) {
+            const probe = new WebSocket(buildWorldSocketUrl(gameId, faction));
+            probeSockets.push(probe);
+
+            probe.on('open', () => finish(faction));
+
+            probe.on('close', () => {
+                closedCount++;
+                if (closedCount === WORLD_SOCKET_FACTIONS.length) {
+                    finish(null);
+                }
+            });
+        }
+    });
+}
+
+async function resolveWorldSocketFaction(gameId: string): Promise<WorldSocketFaction | null> {
+    if (worldSocketFactions[gameId]) {
+        return worldSocketFactions[gameId];
+    }
+
+    if (!worldSocketDiscovery[gameId]) {
+        worldSocketDiscovery[gameId] = discoverValidFaction(gameId).finally(() => {
+            delete worldSocketDiscovery[gameId];
+        });
+    }
+
+    const faction = await worldSocketDiscovery[gameId];
+    if (faction) {
+        worldSocketFactions[gameId] = faction;
+    }
+    return faction;
+}
 
 export type FactionSocketData = {
     type: 'new_vote'
@@ -23,43 +107,39 @@ export type FactionSocketData = {
 }
 
 export async function startWorldSocket(gameId: string) {
-    if (!worldSockets[gameId]?.OPEN) {
-        const worldSocketString = `${process.env.WS_BASE_URL}game/${gameId}/world_update`;
-        const authToken = process.env.AUTH_TOKEN;
-
-        const socketWithAuth = `${worldSocketString}?token=${authToken}`;
-        // NOTE: WebSocket seems to have a weird issue with the way the token is processed.
-        // Factions expects there to be a comma and a space between token and the auth token
-        // while by default the WebSocket only does comma seperation. This is resolved in node_modules for me.
-        const ws = new ReconnectingWebSocket(socketWithAuth, [], {
-            WebSocket,
-            debug: false
-        });
-
-        worldSockets[gameId] = ws;
-
-        ws.addEventListener('error', (event) => {
-            console.log(event);
-        });
-
-        ws.addEventListener('message', (event) => {
-            const json = JSON.parse(event.data);
-
-            const message = JSON.stringify(json);
-            console.log(`Received message from server: ${message}`);
-
-            handleMessage('world_socket', json);
-        });
+    const existing = worldSockets[gameId];
+    if (
+        existing?.readyState === WebSocket.OPEN ||
+        existing?.readyState === WebSocket.CONNECTING
+    ) {
+        return;
     }
+
+    const faction = await resolveWorldSocketFaction(gameId);
+    if (!faction) {
+        console.error(`No valid faction websocket for game ${gameId}`);
+        return;
+    }
+
+    const ws = new ReconnectingWebSocket(buildWorldSocketUrl(gameId, faction), [], {
+        WebSocket,
+        debug: false
+    });
+
+    worldSockets[gameId] = ws;
+    attachWorldSocketHandlers(ws);
+
+    console.log(`Connected world socket for game ${gameId} on faction ${faction}`);
 }
 
 export async function stopWorldSocket(gameId: string) {
     const socket = worldSockets[gameId];
-    if (socket?.OPEN) {
+    if (socket?.readyState === WebSocket.OPEN) {
         socket.close(1001);
-
-        delete worldSockets[gameId];
     }
+
+    delete worldSockets[gameId];
+    delete worldSocketFactions[gameId];
 }
 
 export async function startPeriodicParsing(gameId: string) {
