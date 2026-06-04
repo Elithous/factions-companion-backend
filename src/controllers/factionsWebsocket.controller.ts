@@ -76,7 +76,7 @@ async function discoverValidFaction(gameId: string): Promise<WorldSocketFaction 
 
             probe.on('error', (error: Error) => {
                 console.log(`${faction}: ${error.message}`);
-            })
+            });
         }
     });
 }
