@@ -73,6 +73,10 @@ async function discoverValidFaction(gameId: string): Promise<WorldSocketFaction 
                     finish(null);
                 }
             });
+
+            probe.on('error', (error: Error) => {
+                console.log(`${faction}: ${error.message}`);
+            })
         }
     });
 }
