@@ -5,10 +5,12 @@ import { getSetting, initSettings } from './services/settings.service';
 import routes from './routes';
 import { watchGame, updateAllActiveGame } from './controllers/factionsWebsocket.controller';
 import config from './config/config';
+import { processWorldMessages } from './services/factionsWebsocket.service';
 
 async function start() {
     await initDB();
     await initSettings();
+    await processWorldMessages();
 
     // TODO: Get currently watched games and start their threads.
     // Watch websockets and process the information

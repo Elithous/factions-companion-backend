@@ -65,18 +65,20 @@ export async function processWorldMessages(reprocess: boolean = false) {
         order: ['id']
     });
 
+    const messageIgnoreTypes = ['send_update', 'world_update', 'player_online', 'player_offline', 'new_vote', 'ping'];
     try {
         const processedIds: number[] = [];
         const newActivity: CreationAttributes<ActivitiesModel>[] = [];
         for (const message of unprocessedMessages) {
             const data = message.data;
 
-            if (data?.hash) {
-                // Mark hash updates as processed for now.
-                // They can contain tile updates but I am not worrying about those right now.
+            if (data?.hash || messageIgnoreTypes.includes(data?.type)) {
+                // Mark hash updates and certain update types as processed for now.
+                // They can contain tile updates or vote info but I am not worrying about those right now.
                 processedIds.push(message.id);
             }
-            else if (data?.type === PlayerActivityType.INITIAL_ACTIVITIES) {
+            else if (data?.type === PlayerActivityType.INITIAL_ACTIVITIES
+                || data?.type === PlayerActivityType.INITIAL_BATTLE_ACTIVITIES) {
                 // With activity ids we can check if we missed anything after a restart.
                 const activityList = data.list as PlayerActivity[];
                 for (const activity of activityList) {
@@ -109,14 +111,16 @@ export async function processWorldMessages(reprocess: boolean = false) {
             updateOnDuplicate: ['id']
         });
 
-        // Update processed flag for processed json messages
-        RawJsonModel.update({
-            processed: true
-        }, {
-            where: {
-                id: processedIds
-            }
-        });
+        if (processedIds.length) {
+            // Update processed flag for processed json messages
+            RawJsonModel.update({
+                processed: true
+            }, {
+                where: {
+                    id: processedIds
+                }
+            });
+        }
 
     } catch (error) {
         // Print out the error for now so the process keeps running.

@@ -20,6 +20,7 @@ export interface PlayerActivity {
 
 export enum PlayerActivityType {
     INITIAL_ACTIVITIES = "initial_activities",
+    INITIAL_BATTLE_ACTIVITIES = "initial_battle_activities",
     PAGE_LOADED = "page_loaded",
     BUILDING_BUILT = "building_built",
     BUILDING_UPGRADED = "building_upgraded",
