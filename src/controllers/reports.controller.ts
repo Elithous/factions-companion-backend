@@ -25,7 +25,7 @@ import {
 
 export async function getSoldierStatsByFaction(req: Request, res: Response) {
     try {
-        const { gameId, playerName, tileX, tileY, fromFaction, dateStart, dateEnd } = req.query;
+        const { gameId, playerName, tileX, tileY, fromFaction, toFaction, dateStart, dateEnd } = req.query;
         let whereQuery: WhereOptions<InferAttributes<ActivitiesModel>> = {
             game_id: gameId as string
         };
@@ -38,6 +38,9 @@ export async function getSoldierStatsByFaction(req: Request, res: Response) {
         }
         if (fromFaction) {
             whereQuery.player_faction = fromFaction as string;
+        }
+        if (toFaction) {
+            whereQuery.previous_faction = toFaction as string;
         }
 
         const createdQuery: WhereAttributeHashValue<number> = {}
@@ -61,7 +64,7 @@ export async function getSoldierStatsByFaction(req: Request, res: Response) {
 
 export async function getSoliderStatsByTile(req: Request, res: Response) {
     try {
-        const { gameId, playerName, fromFaction, dateStart, dateEnd } = req.query;
+        const { gameId, playerName, fromFaction, toFaction, dateStart, dateEnd } = req.query;
         let whereQuery: WhereOptions<InferAttributes<ActivitiesModel>> = {
             game_id: gameId as string
         };
@@ -70,6 +73,9 @@ export async function getSoliderStatsByTile(req: Request, res: Response) {
         }
         if (fromFaction) {
             whereQuery.player_faction = fromFaction as string;
+        }
+        if (toFaction) {
+            whereQuery.previous_faction = toFaction as string;
         }
         const createdQuery: WhereAttributeHashValue<number> = {}
         if (parseFloat(dateStart as string)) {
