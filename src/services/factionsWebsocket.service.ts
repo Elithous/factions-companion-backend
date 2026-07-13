@@ -10,7 +10,7 @@ type QueueTypes = 'world_socket'
 const saveInterval = 5000;
 const queueLimit = 100;
 const messageQueue: {[type in QueueTypes]: any[]} = { world_socket: [] };
-const messageIntervals: {[type in QueueTypes]: NodeJS.Timeout } = { world_socket: null };
+const messageIntervals: {[type in QueueTypes]: NodeJS.Timeout | null } = { world_socket: null };
 
 export async function handleMessage(type: QueueTypes, rawJson: any) {
     // Start up the save interval if it's not started.

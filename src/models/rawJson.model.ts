@@ -1,11 +1,11 @@
-import { DataTypes, ModelAttributes, ModelStatic, ModelOptions, InferAttributes, InferCreationAttributes, Sequelize } from "sequelize";
+import { DataTypes, ModelAttributes, ModelStatic, ModelOptions, InferAttributes, InferCreationAttributes, Sequelize, CreationOptional } from "sequelize";
 import { BaseModel } from "./base.model";
 
 export class RawJsonModel extends BaseModel<InferAttributes<RawJsonModel>, InferCreationAttributes<RawJsonModel>> {
     declare type: string;
     declare data: any;
-    declare created_at: string | Date;
-    declare processed: boolean;
+    declare created_at: CreationOptional<string | Date>;
+    declare processed: CreationOptional<boolean>;
 
     static modelAttributes(): ModelAttributes {
         return {

@@ -1,13 +1,13 @@
-import { ModelStatic, ModelOptions, ModelAttributes, DataTypes, Model} from "sequelize";
+import { ModelStatic, ModelOptions, ModelAttributes, DataTypes, Model, CreationOptional} from "sequelize";
 
 export class BaseModel<
-    TModelAttributes,
-    TModelCreationAttributes
+    TModelAttributes extends {},
+    TModelCreationAttributes extends {}
 > extends Model<
     TModelAttributes,
     TModelCreationAttributes
 > {
-    declare id: number;
+    declare id: CreationOptional<number>;
 
     static modelAttributes(): ModelAttributes {
             return {
