@@ -1,10 +1,11 @@
 import express from 'express';
-import websocketRoutes from './websocket.routes';
+
 import reportRoutes from './reports.routes';
+import websocketRoutes from './websocket.routes';
 
 const router = express.Router();
 
 router.use('/websocket', websocketRoutes);
-router.use('/report/', reportRoutes);
+router.use('/report', reportRoutes);
 
 export default router;

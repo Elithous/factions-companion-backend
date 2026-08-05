@@ -1,5 +1,5 @@
 import { Sequelize } from "sequelize";
-import config from '../config/config';
+import { dbConfig } from '../config';
 import { ActivitiesModel } from '../models/activities/activities.model';
 import { RawJsonModel } from '../models/rawJson.model';
 import { SettingsModel } from "../models/setting.model";
@@ -18,12 +18,11 @@ const models = [
 
 export async function initDB() {
     sequelize = new Sequelize(
-        config.DB_NAME,
-        config.DB_USER,
-        config.DB_PASSWORD,
+        dbConfig.DB_NAME,
+        dbConfig.DB_USER,
+        dbConfig.DB_PASSWORD,
         {
-            // logging: false,
-            host: config.DB_HOST,
+            host: dbConfig.DB_HOST,
             dialect: 'mysql'
         }
     );

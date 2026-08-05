@@ -1,5 +1,4 @@
 import ReportCacheModel from "../../models/reportCache.model";
-import { Op } from 'sequelize';
 import { getSetting } from "../settings.service";
 
 // Report types
@@ -23,6 +22,9 @@ export enum ReportType {
 
 // Default cache duration in milliseconds (1 hour)
 const DEFAULT_CACHE_DURATION = 60 * 60 * 1000;
+
+// Filter-keyed reports are cheaper to regenerate, so they expire faster.
+const FILTERED_CACHE_DURATION = 5 * 60 * 1000;
 
 /**
  * Gets cached report data if available and not expired
@@ -93,38 +95,9 @@ export async function cacheReport(
         report_type: reportType,
         parameters: paramString,
         data,
+        created_at: now,
         revalidate_at: revalidateAt
     });
-}
-
-/**
- * Checks if a valid cache exists for the specified report
- * @param gameId The game ID (can be null)
- * @param reportType The type of report
- * @param params Optional parameters that were used to generate the report
- * @returns True if valid cache exists, false otherwise
- */
-export async function hasValidCache(
-    gameId: string | null,
-    reportType: ReportType,
-    params: Record<string, any> = {}
-): Promise<boolean> {
-    const now = new Date();
-    const paramString = JSON.stringify(params);
-
-    // Find cache entry
-    const count = await ReportCacheModel.count({
-        where: {
-            game_id: gameId || '',
-            report_type: reportType,
-            parameters: paramString,
-            revalidate_at: {
-                [Op.gt]: now
-            }
-        }
-    });
-
-    return count > 0;
 }
 
 /**
@@ -158,3 +131,62 @@ export async function invalidateCache(
         { where }
     );
 } 
+/**
+ * Wraps a report generator with read-through caching.
+ *
+ * Every generator used to open with a `getCachedReport` check and close with a
+ * `cacheReport` write; this collapses that bookend into one call:
+ *
+ *     return withReportCache(gameId, ReportType.TILE, () => buildTileReport(gameId));
+ *
+ * `params` distinguishes cache entries for generators that take arguments
+ * beyond the game id (e.g. the APM report's timespan).
+ */
+export async function withReportCache<T>(
+    gameId: string | null,
+    reportType: ReportType,
+    generate: () => Promise<T>,
+    params: Record<string, any> = {}
+): Promise<T> {
+    const cached = await getCachedReport(gameId, reportType, params);
+    if (cached) {
+        return cached as T;
+    }
+
+    const data = await generate();
+    await cacheReport(gameId, reportType, data, params);
+
+    return data;
+}
+
+/**
+ * Read-through cache for reports keyed by a Sequelize filter rather than a
+ * plain game id.
+ *
+ * Date-bounded filters are effectively unique per request, so caching them
+ * would just fill the table with single-use rows — those requests skip the
+ * cache entirely.
+ */
+export async function withFilteredReportCache<T>(
+    filter: { game_id?: unknown; created_at?: unknown; updated_at?: unknown },
+    reportType: ReportType,
+    generate: () => Promise<T>,
+    cacheDuration: number = FILTERED_CACHE_DURATION
+): Promise<T> {
+    const isDateFiltered = !!(filter.created_at || filter.updated_at);
+    const gameId = `${filter.game_id}`;
+
+    if (isDateFiltered) {
+        return generate();
+    }
+
+    const cached = await getCachedReport(gameId, reportType, filter as Record<string, any>);
+    if (cached) {
+        return cached as T;
+    }
+
+    const data = await generate();
+    await cacheReport(gameId, reportType, data, filter as Record<string, any>, cacheDuration);
+
+    return data;
+}

@@ -1,10 +1,11 @@
 import WebSocket from "ws";
+import { factionsConfig } from "../config";
 import ReconnectingWebSocket from "reconnecting-websocket"
 import { PlayerActivity } from "../types/playerActivity.type";
 import { handleMessage, processWorldMessages } from "../services/factionsWebsocket.service";
 import { getSetting, setSetting } from "../services/settings.service";
 import { saveAllCaseData, savePastActivities, updateMissingTileData } from "../services/activities.service";
-import { apiFetch } from "./api.controller";
+import { apiFetch } from "../clients/factionsApi";
 import { FactionsGame } from "../types/apiResponses/factionsGame.type";
 
 const WORLD_SOCKET_FACTIONS = ['RED', 'BLUE', 'GREEN', 'YELLOW'] as const;
@@ -16,8 +17,8 @@ const worldSocketDiscovery: { [gameId: string]: Promise<WorldSocketFaction | nul
 const parseIntervals: { [gameId: string]: NodeJS.Timeout } = {};
 
 function buildWorldSocketUrl(gameId: string, faction: WorldSocketFaction) {
-    const authToken = process.env.AUTH_TOKEN;
-    return `${process.env.WS_BASE_URL}game/${gameId}/${faction}?token=${authToken}`;
+    const { WS_BASE_URL, AUTH_TOKEN } = factionsConfig;
+    return `${WS_BASE_URL}game/${gameId}/${faction}?token=${AUTH_TOKEN}`;
 }
 
 function attachWorldSocketHandlers(ws: ReconnectingWebSocket) {

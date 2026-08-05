@@ -1,50 +1,61 @@
-import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
-import { initDB } from './controllers/database.controller';
-import { getSetting, initSettings } from './services/settings.service';
+import express, { Express, Request, Response } from 'express';
+
+import { assertConfig, serverConfig } from './config';
+import { initDB } from './db';
+import { errorHandler } from './http/errors';
 import routes from './routes';
-import { watchGame, updateAllActiveGame } from './controllers/factionsWebsocket.controller';
-import config from './config/config';
 import { processWorldMessages } from './services/factionsWebsocket.service';
+import { getSetting, initSettings } from './services/settings.service';
+import { updateAllActiveGame, watchGame } from './workers/gameWatcher';
+
+/** How often to rescan the upstream game list for games to start/stop watching. */
+const ACTIVE_GAME_POLL_MS = 60 * 60 * 1000;
+
+/** Reconnect to every game that was on the watch list when we last shut down. */
+async function resumeWatchedGames() {
+    const setting = await getSetting('socket');
+    setting?.watchList?.forEach(gameId => watchGame(gameId));
+}
+
+function startActiveGamePolling() {
+    const poll = () =>
+        updateAllActiveGame().catch(err => console.error('Error updating active games:', err));
+
+    poll();
+    setInterval(poll, ACTIVE_GAME_POLL_MS);
+}
+
+function createServer(): Express {
+    const app = express();
+
+    app.use(cors());
+    app.get('/', (_req: Request, res: Response) => {
+        res.send('Express Server');
+    });
+    app.use('/', routes);
+    app.use(errorHandler);
+
+    return app;
+}
 
 async function start() {
+    assertConfig();
+
     await initDB();
     await initSettings();
     await processWorldMessages();
 
-    // TODO: Get currently watched games and start their threads.
-    // Watch websockets and process the information
-    getSetting('socket').then(setting => {
-        if (setting?.watchList) {
-            setting.watchList.forEach(value => watchGame(value));
-        }
-    });
-    // Get current game settings to allow cost calcs
-    // Maybe something with the map?
-    // savePastActivities('31');
+    await resumeWatchedGames();
+    startActiveGamePolling();
 
-    // Periodically check for new active games to watch every hour
-    setInterval(() => {
-        updateAllActiveGame().catch(err => console.error('Error in watchAllActiveGames:', err));
-    }, 60 * 60 * 1000); // 1 hour in milliseconds
-
-    // Run once on startup
-    updateAllActiveGame().catch(err => console.error('Error in watchAllActiveGames (startup):', err));
-
-    // Express setup
-    const app: Express = express();
-    const port = config.PORT;
-
-    app.use(cors());
-    app.use('/', routes);
-
-    app.get('/', (req: Request, res: Response) => {
-        res.send('Express Server');
-    });
-
-    app.listen(port, () => {
-        console.log(`[server]: Server is running at http://localhost:${port}`);
+    const app = createServer();
+    app.listen(serverConfig.PORT, () => {
+        console.log(`[server]: Server is running at http://localhost:${serverConfig.PORT}`);
     });
 }
 
-start();
+start().catch(error => {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+});

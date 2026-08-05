@@ -1,4 +1,4 @@
-import { apiFetch, getCaseData } from "../controllers/api.controller";
+import { apiFetch, getCaseData } from "../clients/factionsApi";
 import { ActivitiesModel } from "../models/activities/activities.model";
 import { FactionColor } from "../types/faction.type";
 import { parseActivityLine } from "./factionsWebsocket.service";

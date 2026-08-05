@@ -1,54 +1,33 @@
 import express, { Request, Response } from 'express';
 
-import { unsetWatchGame, setWatchGame } from '../controllers/factionsWebsocket.controller';
+import { asyncHandler } from '../http/asyncHandler';
 import { processWorldMessages } from '../services/factionsWebsocket.service';
+import { setWatchGame, unsetWatchGame } from '../workers/gameWatcher';
 
-// converts boolean strings to booleans
-function parseBoolean(string) {
-    return string === "true" ? true : string === "false" ? false : undefined;
-};
+/** Query strings are always strings; anything other than "true"/"false" is unset. */
+function parseBoolean(value: unknown): boolean | undefined {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return undefined;
+}
 
 const router = express.Router();
 
-router.post('/watch/:gameId', async (req: Request<{gameId: string }>, res: Response) => {
-    try {
-        const gameId = req.params.gameId;
-        if (!gameId) {
-            throw new Error('Game ID not supplied.');
-        }
-        // TODO: Add validation and check if we are already watching this game.
-        await setWatchGame(gameId);
+// TODO: Add validation and check whether we are already watching this game.
+router.post('/watch/:gameId', asyncHandler(async (req: Request<{ gameId: string }>, res: Response) => {
+    await setWatchGame(req.params.gameId);
+    res.status(204).send();
+}));
 
-        res.status(204).send();
-    } catch (error) {
-        res.status(400).json({ message: `Error setting up game watch: ${error}`});
-    }
-});
+router.delete('/watch/:gameId', asyncHandler(async (req: Request<{ gameId: string }>, res: Response) => {
+    await unsetWatchGame(req.params.gameId);
+    res.status(204).send();
+}));
 
-router.delete('/watch/:gameId', async (req: Request<{gameId: string }>, res: Response) => {
-    try {
-        const gameId = req.params.gameId;
-        if (!gameId) {
-            throw new Error('Game ID not supplied.');
-        }
-        // TODO: Add validation and check if we are already watching this game.
-        await unsetWatchGame(gameId);
-
-        res.status(204).send();
-    } catch (error) {
-        res.status(400).json({ message: `Error removing game watch: ${error}`});
-    }
-});
-
-router.post('/parse', async (req: Request<{}, { reprocess: string}>, res: Response) => {
-    try {
-        const reprocess = parseBoolean(req.query.reprocess)
-        await processWorldMessages(reprocess);
-
-        res.status(204).send();
-    } catch (error) {
-        res.status(400).json({ message: `Error processing messages: ${error}`});
-    }
-});
+/** Re-parses stored raw messages. `?reprocess=true` wipes and rebuilds everything. */
+router.post('/parse', asyncHandler(async (req: Request, res: Response) => {
+    await processWorldMessages(parseBoolean(req.query.reprocess));
+    res.status(204).send();
+}));
 
 export default router;

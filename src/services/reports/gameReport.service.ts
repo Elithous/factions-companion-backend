@@ -1,8 +1,9 @@
 import { Op } from "sequelize";
-import { apiFetch } from "../../controllers/api.controller";
+import { apiFetch } from "../../clients/factionsApi";
 import { ActivitiesModel } from "../../models/activities/activities.model";
 import { GameConfigModel } from "../../models/config.model";
 import { HqConfigModel } from "../../types/apiResponses/hq.type";
+import { FactionColor } from "../../types/faction.type";
 
 export async function getAvailableGameIds() {
     const gameIds = await ActivitiesModel.findAll({
@@ -63,4 +64,29 @@ export async function getAllActivePlayers(gameId: string) {
     });
 
     return players;
+}
+
+export type HqPosition = { x: number, y: number };
+
+/** Where each faction's HQ sits on the map, per the game's map config. */
+export async function getHqPositions(gameId: string): Promise<Partial<Record<FactionColor, HqPosition>>> {
+    const config = await getConfig(gameId);
+    return config?.mapConfig?.hqs_positions ?? {};
+}
+
+/**
+ * The inverse of `getHqPositions`: each HQ's `"x:y"` tile to its owning faction.
+ *
+ * Loot events record the tile they hit rather than the team they hit, so the
+ * loot reports use this to work out who was being looted.
+ */
+export async function getHqPositionLookup(gameId: string): Promise<Record<string, FactionColor>> {
+    const positions = await getHqPositions(gameId);
+
+    const lookup: Record<string, FactionColor> = {};
+    for (const [faction, position] of Object.entries(positions)) {
+        lookup[`${position.x}:${position.y}`] = faction as FactionColor;
+    }
+
+    return lookup;
 }

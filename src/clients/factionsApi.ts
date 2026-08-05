@@ -1,9 +1,17 @@
+import { factionsConfig } from "../config";
 import { HqConfigModel, HqEffectsModel, HqInfoModel } from "../types/apiResponses/hq.type";
 import { FactionsGame } from "../types/apiResponses/factionsGame.type";
 import { Leaderboard } from "../types/leaderboard.type";
 import { PlayerActivity } from "../types/playerActivity.type";
 
-const baseUrl = process.env.API_BASE_URL;
+const baseUrl = factionsConfig.API_BASE_URL;
+
+/**
+ * Every upstream Factions endpoint the backend calls.
+ *
+ * `returnType` exists only to carry a type through to `apiFetch`'s return —
+ * it is never read at runtime. `{gameId}` in a url is substituted per call.
+ */
 const endpointMap = {
     get_hq_info: { url: `${baseUrl}game/{gameId}/hq/info`, returnType: {} as HqInfoModel },
     get_hq_effects: { url: `${baseUrl}game/{gameId}/hq/effects`, returnType: {} as HqEffectsModel },
@@ -27,16 +35,7 @@ export async function apiFetch<E extends Endpoint>(
         queryParams?: Record<string, string>
     }
 ): Promise<EndpointReturnType<typeof endpoint>> {
-    let url = endpointMap[endpoint].url;
-
-    // Replace string substitutions
-    const replacements = { gameId };
-    url = url.replace( // https://stackoverflow.com/a/61634647
-        /{(\w+)}/g,
-        (placeholderWithDelimiters, placeholderWithoutDelimiters) =>
-            replacements.hasOwnProperty(placeholderWithoutDelimiters) ?
-                replacements[placeholderWithoutDelimiters] : placeholderWithDelimiters
-    );
+    let url = endpointMap[endpoint].url.replace('{gameId}', gameId);
 
     if (options?.queryParams) {
         url += '?' + new URLSearchParams(options.queryParams).toString();
@@ -45,22 +44,20 @@ export async function apiFetch<E extends Endpoint>(
     const response = await fetch(url, {
         ...(options?.options ?? {}),
         headers: {
-            Authorization: `Bearer ${process.env.AUTH_TOKEN}`
+            Authorization: `Bearer ${factionsConfig.AUTH_TOKEN}`
         }
     });
 
     if (!response.ok) {
-        return Promise.reject(response.status);
+        throw new Error(`Factions API ${endpoint} failed with status ${response.status}`);
     }
 
     return response.json();
 }
 
-// export async function getHqInfo() {
-//     return (await apiFetch('get_hq_info')) as HqInfo;
-// }
-
-export async function getCaseData(gameId: string, x: number, y: number) {
-    const params = { x: x.toString(), y: y.toString() };
-    return apiFetch('get_case_data', gameId, { queryParams: params });
+/** Activity history for a single map tile. */
+export function getCaseData(gameId: string, x: number, y: number) {
+    return apiFetch('get_case_data', gameId, {
+        queryParams: { x: x.toString(), y: y.toString() }
+    });
 }

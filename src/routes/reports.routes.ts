@@ -1,55 +1,66 @@
 import express from 'express';
+
 import {
-    getSoldierStatsByFaction,
-    getAvailableGames,
-    getSoliderStatsByTile,
-    getPlayerMvpLeaderboard,
-    getGameTimespan,
-    getGameConfig,
-    allActivities,
-    getPlayerApmLeaderboard,
-    getTileLeaderboard,
-    getPlayerActionCounts,
     getActivePlayers,
-    getPlayerStatsByPlayerName,
-    getResourcesSentLeaderboard,
-    getResourcesReceivedLeaderboard,
+    getAvailableGames,
+    getGameConfig,
+    getGameTimespan,
+} from '../controllers/game.controller';
+import {
+    allActivities,
     getBuildingKillLeaderboard,
     getBuildingPillageLeaderboard,
     getBuildingPlacementLeaderboard,
     getBuildingSupplyLeaderboard,
+    getLootActions,
+    getResourcesReceivedLeaderboard,
+    getResourcesSentLeaderboard,
+    getTileLeaderboard,
+} from '../controllers/leaderboard.controller';
+import {
+    getPlayerActionCounts,
+    getPlayerApmLeaderboard,
     getPlayerLootLeaderboard,
-    getLootActions
-} from '../controllers/reports.controller';
+    getPlayerMvpLeaderboard,
+    getPlayerStatsByPlayerName,
+} from '../controllers/player.controller';
+import {
+    getSoldierStatsByFaction,
+    getSoldierStatsByTile,
+} from '../controllers/soldier.controller';
 
 const router = express.Router();
 
-// Player-related routes
+// Players
 router.get('/player/mvp', getPlayerMvpLeaderboard);
 router.get('/player/apm', getPlayerApmLeaderboard);
 router.get('/player/actions', getPlayerActionCounts);
 router.get('/player/active', getActivePlayers);
-router.get('/player/stats/:playerName', getPlayerStatsByPlayerName);
 router.get('/player/loot', getPlayerLootLeaderboard);
+router.get('/player/stats/:playerName', getPlayerStatsByPlayerName);
 
-// Soldier-related routes
+// Soldiers
 router.get('/soldiers/faction', getSoldierStatsByFaction);
-router.get('/soldiers/tile', getSoliderStatsByTile);
+router.get('/soldiers/tile', getSoldierStatsByTile);
 
-// Game-related routes
+// Games
 router.get('/games', getAvailableGames);
 router.get('/games/timespan', getGameTimespan);
 router.get('/games/config', getGameConfig);
 
-// Other routes
-router.get('/tile', getTileLeaderboard);
-router.get('/loot/actions', getLootActions);
-router.get('/resources/sent', getResourcesSentLeaderboard);
-router.get('/resources/received', getResourcesReceivedLeaderboard);
-router.get('/activities/all', allActivities);
+// Buildings
 router.get('/buildings/kills', getBuildingKillLeaderboard);
 router.get('/buildings/pillaged', getBuildingPillageLeaderboard);
 router.get('/buildings/placement', getBuildingPlacementLeaderboard);
 router.get('/buildings/supply', getBuildingSupplyLeaderboard);
+
+// Resources
+router.get('/resources/sent', getResourcesSentLeaderboard);
+router.get('/resources/received', getResourcesReceivedLeaderboard);
+
+// Misc
+router.get('/tile', getTileLeaderboard);
+router.get('/loot/actions', getLootActions);
+router.get('/activities/all', allActivities);
 
 export default router;

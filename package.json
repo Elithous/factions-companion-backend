@@ -3,16 +3,15 @@
   "type": "module",
   "scripts": {
     "start": "npx tsx src/app.ts",
-    "docker-start": "docker compose up --build",
     "dev": "npx tsx watch src/app.ts",
-    "test": "npx tsx src/tmp/wsTestClient.ts",
+    "typecheck": "npx tsc --noEmit",
+    "docker-start": "docker compose up --build",
     "socket-saver": "npx tsx src/scripts/startSocketSaver.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "fs": "^0.0.1-security",
     "luxon": "^3.4.4",
     "mysql2": "^3.11.5",
     "reconnecting-websocket": "^4.4.0",
@@ -21,6 +20,7 @@
     "ws": "^8.21.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.0",
     "@types/luxon": "^3.4.2",
     "@types/node": "^20.17.10",
