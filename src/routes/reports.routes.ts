@@ -2,9 +2,13 @@ import express from 'express';
 
 import {
     getActivePlayers,
+    getAllPlayers,
     getAvailableGames,
+    getBuildingCatalogue,
     getGameConfig,
     getGameTimespan,
+    getProjectTrees,
+    importProjectTree,
 } from '../controllers/game.controller';
 import {
     allActivities,
@@ -22,12 +26,14 @@ import {
     getPlayerApmLeaderboard,
     getPlayerLootLeaderboard,
     getPlayerMvpLeaderboard,
-    getPlayerStatsByPlayerName,
+    getPlayerProfileById,
+    getPlayerStatsByPlayerId,
 } from '../controllers/player.controller';
 import {
     getSoldierStatsByFaction,
-    getSoldierStatsByTile,
-} from '../controllers/soldier.controller';
+    getUnitStatsByTile,
+} from '../controllers/units.controller';
+import { getTileDetail } from '../controllers/tile.controller';
 
 const router = express.Router();
 
@@ -36,17 +42,22 @@ router.get('/player/mvp', getPlayerMvpLeaderboard);
 router.get('/player/apm', getPlayerApmLeaderboard);
 router.get('/player/actions', getPlayerActionCounts);
 router.get('/player/active', getActivePlayers);
+router.get('/player/all', getAllPlayers);
 router.get('/player/loot', getPlayerLootLeaderboard);
-router.get('/player/stats/:playerName', getPlayerStatsByPlayerName);
+router.get('/player/stats/:playerId', getPlayerStatsByPlayerId);
+router.get('/player/profile/:playerId', getPlayerProfileById);
 
 // Soldiers
 router.get('/soldiers/faction', getSoldierStatsByFaction);
-router.get('/soldiers/tile', getSoldierStatsByTile);
+router.get('/units/tile', getUnitStatsByTile);
 
 // Games
 router.get('/games', getAvailableGames);
 router.get('/games/timespan', getGameTimespan);
 router.get('/games/config', getGameConfig);
+router.get('/games/buildings', getBuildingCatalogue);
+router.get('/games/projects', getProjectTrees);
+router.post('/games/projects', importProjectTree);
 
 // Buildings
 router.get('/buildings/kills', getBuildingKillLeaderboard);
@@ -58,8 +69,11 @@ router.get('/buildings/supply', getBuildingSupplyLeaderboard);
 router.get('/resources/sent', getResourcesSentLeaderboard);
 router.get('/resources/received', getResourcesReceivedLeaderboard);
 
-// Misc
+// Tiles
 router.get('/tile', getTileLeaderboard);
+router.get('/tile/detail', getTileDetail);
+
+// Misc
 router.get('/loot/actions', getLootActions);
 router.get('/activities/all', allActivities);
 

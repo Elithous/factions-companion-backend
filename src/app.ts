@@ -30,6 +30,9 @@ function createServer(): Express {
     const app = express();
 
     app.use(cors());
+    // Definition payloads are posted whole and run to tens of thousands of
+    // lines, so the default 100kb body limit is raised.
+    app.use(express.json({ limit: '10mb' }));
     app.get('/', (_req: Request, res: Response) => {
         res.send('Express Server');
     });

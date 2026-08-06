@@ -1,4 +1,4 @@
-import { InferAttributes, Op, WhereAttributeHashValue, WhereOptions } from 'sequelize';
+import { InferAttributes, Op, WhereOperators, WhereOptions } from 'sequelize';
 import { Request } from 'express';
 
 import { ActivitiesModel } from '../models/activities/activities.model';
@@ -18,6 +18,24 @@ export function requireQuery(req: Request, name: string): string {
 export function optionalQuery(req: Request, name: string): string | undefined {
     const value = req.query[name];
     return typeof value === 'string' && value ? value : undefined;
+}
+
+/** Reads an optional whole-number query param, ignoring anything unparseable. */
+export function optionalIntQuery(req: Request, name: string): number | undefined {
+    const raw = optionalQuery(req, name);
+    if (raw === undefined) return undefined;
+
+    const value = parseInt(raw, 10);
+    return isNaN(value) ? undefined : value;
+}
+
+/** Reads a whole-number query param the endpoint cannot run without. */
+export function requireIntQuery(req: Request, name: string): number {
+    const value = parseInt(requireQuery(req, name), 10);
+    if (isNaN(value)) {
+        throw badRequest(`Parameter ${name} must be a number`);
+    }
+    return value;
 }
 
 /** Parses a comma-separated query param into a list. Empty entries are dropped. */
@@ -45,8 +63,8 @@ export function buildActivityFilter(req: Request, options: { includeTile?: boole
         game_id: requireQuery(req, 'gameId'),
     };
 
-    const playerName = optionalQuery(req, 'playerName');
-    if (playerName) filter.player_name = playerName;
+    const playerId = optionalIntQuery(req, 'playerId');
+    if (playerId !== undefined) filter.player_id = playerId;
 
     const fromFaction = optionalQuery(req, 'fromFaction');
     if (fromFaction) filter.player_faction = fromFaction;
@@ -63,7 +81,7 @@ export function buildActivityFilter(req: Request, options: { includeTile?: boole
         }
     }
 
-    const createdAt: WhereAttributeHashValue<number> = {};
+    const createdAt: WhereOperators<number> = {};
     const dateStart = parseFloat(optionalQuery(req, 'dateStart') ?? '');
     const dateEnd = parseFloat(optionalQuery(req, 'dateEnd') ?? '');
     if (dateStart) createdAt[Op.gte] = dateStart;

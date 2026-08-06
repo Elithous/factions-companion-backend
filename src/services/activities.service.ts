@@ -2,9 +2,9 @@ import { apiFetch, getCaseData } from "../clients/factionsApi";
 import { ActivitiesModel } from "../models/activities/activities.model";
 import { FactionColor } from "../types/faction.type";
 import { parseActivityLine } from "./factionsWebsocket.service";
-import { getConfig } from "./reports/gameReport.service";
+import { getConfig, TILE_DEFAULT_SOLDIERS } from "./reports/gameReport.service";
 
-const delay = millis => new Promise((resolve, reject) => {
+const delay = (millis: number) => new Promise((resolve, reject) => {
     setTimeout(_ => resolve(true), millis)
 });
 
@@ -68,24 +68,16 @@ export async function savePastActivities(gameId: string) {
 }
 
 
-const tileSoldierDefaults = {
-    'mine': 30,
-    'tree': 30,
-    'village': 50,
-    'farm': 50,
-    'bridge': 50,
-    'temple': 200,
-    'tower': 200,
-    'city': 300,
-    'mansion': 300,
-    'castle': 500
-};
-
 export async function updateMissingTileData(gameId: string) {
     // Get game parameters for map size
     const config = await getConfig(gameId);
 
-    const {width, height} = config.mapConfig;
+    if (!config.mapConfig || !config.world) {
+        console.error(`Game ${gameId} has no map config or world data`);
+        return;
+    }
+
+    const { width, height } = config.mapConfig;
 
     for (let x = 0; x < width; x++) {
         for (let y = 0; y < height; y++) {
@@ -102,7 +94,7 @@ export async function updateMissingTileData(gameId: string) {
             let tilePlayer: string | null = null;
 
             const tileType = config.world[x][y];
-            let tileSoldiers = tileSoldierDefaults[tileType] || 0;
+            let tileSoldiers = TILE_DEFAULT_SOLDIERS[tileType] || 0;
 
             tileData.forEach((entry) => {
                 if (entry.type === 'soldiers_attack') {
@@ -125,7 +117,7 @@ export async function updateMissingTileData(gameId: string) {
                 if (entry.type === 'water_back') {
                     tilePlayer = null;
                     tileFaction = null;
-                    tileSoldiers = null;
+                    tileSoldiers = 0;
                 }
 
                 if (entry.type === 'barbarian_return') {

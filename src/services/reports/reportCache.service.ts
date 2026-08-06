@@ -6,6 +6,7 @@ export enum ReportType {
     PLAYER_MVP = 'player_mvp',
     APM = 'apm',
     TILE = 'tile',
+    TILE_DETAIL = 'tile_detail',
     SOLDIER_FACTION = "soldier_faction",
     SOLDIER_TILE = "soldier_tile",
     PLAYER_ACTIONS = "player_actions",
@@ -168,7 +169,10 @@ export async function withReportCache<T>(
  * cache entirely.
  */
 export async function withFilteredReportCache<T>(
-    filter: { game_id?: unknown; created_at?: unknown; updated_at?: unknown },
+    // Extra keys are welcome: the whole object is stringified into the cache key,
+    // so callers can mix in discriminators that aren't columns (unit type, and
+    // the like) to keep otherwise-identical filters in separate entries.
+    filter: Record<string, unknown> & { game_id?: unknown; created_at?: unknown; updated_at?: unknown },
     reportType: ReportType,
     generate: () => Promise<T>,
     cacheDuration: number = FILTERED_CACHE_DURATION

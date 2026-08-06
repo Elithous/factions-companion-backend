@@ -2,10 +2,11 @@ import { Request, Response } from 'express';
 
 import { asyncHandler } from '../http/asyncHandler';
 import { badRequest } from '../http/errors';
-import { listQuery, numberListQuery, requireQuery } from '../http/queryParams';
+import { listQuery, numberListQuery, optionalQuery, requireQuery } from '../http/queryParams';
+import { getPlayerProfile } from '../services/reports/playerProfile.service';
 import {
     generatePlayerActionCounts,
-    generatePlayerStatsByPlayerName,
+    generatePlayerStats,
 } from '../services/reports/activityReport.service';
 import {
     generateApmLeaderboard,
@@ -51,13 +52,28 @@ export const getPlayerActionCounts = asyncHandler(async (req: Request, res: Resp
     res.json(await generatePlayerActionCounts(gameId, types));
 });
 
-export const getPlayerStatsByPlayerName = asyncHandler(async (req: Request, res: Response) => {
-    const gameId = requireQuery(req, 'gameId');
-    const { playerName } = req.params;
+/**
+ * A player's career profile. `refresh=true` rebuilds it rather than serving the
+ * cached copy — that's what the Update button calls.
+ */
+export const getPlayerProfileById = asyncHandler(async (req: Request, res: Response) => {
+    const playerId = parseInt(req.params.playerId, 10);
 
-    if (!playerName) {
-        throw badRequest('Missing required parameter: playerName');
+    if (isNaN(playerId)) {
+        throw badRequest('Parameter playerId must be a number');
     }
 
-    res.json(await generatePlayerStatsByPlayerName(gameId, playerName));
+    const refresh = optionalQuery(req, 'refresh') === 'true';
+    res.json(await getPlayerProfile(playerId, { refresh }));
+});
+
+export const getPlayerStatsByPlayerId = asyncHandler(async (req: Request, res: Response) => {
+    const gameId = requireQuery(req, 'gameId');
+    const playerId = parseInt(req.params.playerId, 10);
+
+    if (isNaN(playerId)) {
+        throw badRequest('Parameter playerId must be a number');
+    }
+
+    res.json(await generatePlayerStats(gameId, playerId));
 });

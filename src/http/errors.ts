@@ -14,16 +14,24 @@ export function badRequest(message: string) {
 
 /**
  * Terminal error handler. Must be registered after all routes.
- * Anything that isn't an `HttpError` is treated as a 400, matching the
- * behaviour of the per-handler try/catch blocks this replaces.
+ *
+ * Only errors that say what status they want get one; anything else is a fault
+ * on our side and reports 500. It used to blanket-default to 400, which made a
+ * failing query look like a malformed request and hid the real cause.
  */
-export function errorHandler(error: unknown, _req: Request, res: Response, _next: NextFunction) {
-    const status = error instanceof HttpError ? error.status : 400;
+export function errorHandler(error: unknown, req: Request, res: Response, _next: NextFunction) {
+    const status = error instanceof HttpError ? error.status : 500;
     const message = error instanceof Error ? error.message : String(error);
 
     if (status >= 500) {
+        // The route is included because the message alone rarely identifies it.
+        console.error(`[${req.method} ${req.originalUrl}] ${message}`);
         console.error(error);
     }
 
-    res.status(status).json({ message });
+    res.status(status).json({
+        message,
+        // Named so a 500 can be traced to a handler without reading the logs.
+        path: req.originalUrl,
+    });
 }

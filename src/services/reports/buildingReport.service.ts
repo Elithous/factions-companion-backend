@@ -11,7 +11,7 @@ export function generateBuildingKillsLeaderboard(gameId: string) {
 async function buildBuildingKillsLeaderboard(gameId: string) {
     const killData = await sequelize.query(`
         SELECT x.x, x.y, x.player_faction, x.support_type as building,
-            SUM(IFNULL(data->>'$.soldiers_destroyed', data->>'$.fortification_removed')) kills
+            SUM(data->>'$.soldiers_destroyed') kills
         FROM activities x
         WHERE game_id = :gameId and type = 'map_building_activated'
         GROUP BY x, y, building, player_faction

@@ -1,6 +1,7 @@
 /** Player-to-player resource transfer leaderboards. */
 
 import { ActivitiesModel } from "../../models/activities/activities.model";
+import { getPlayerNames } from "./playerIdentity.service";
 import { ReportType, withReportCache } from "./reportCache.service";
 
 export function generateResourcesSentLeaderboard(gameId: string) {
@@ -9,19 +10,24 @@ export function generateResourcesSentLeaderboard(gameId: string) {
 
 async function buildResourcesSentLeaderboard(gameId: string) {
     const allResourceSends = await ActivitiesModel.findAll({
-        attributes: ['player_name', 'iron', 'wood', 'recipient'],
+        attributes: ['player_id', 'player_name', 'iron', 'wood', 'recipient'],
         where: {
             game_id: gameId,
             type: 'resources_sent'
         },
-        order: ['player_name']
+        order: ['player_id']
     });
 
-    // Aggregate resources sent by player and recipient
+    const names = await getPlayerNames();
+
+    // Senders are grouped by id so a rename doesn't split their totals. The
+    // recipient column only ever holds a bare name, so those stay name-keyed.
     const playerResources: { [player: string]: { totalIron: number, totalWood: number, recipients: { [recipient: string]: { iron: number, wood: number } } } } = {};
 
     for (const send of allResourceSends) {
-        const player = send.player_name;
+        const player = (send.player_id !== null && send.player_id !== undefined
+            ? names.get(send.player_id)
+            : null) ?? send.player_name ?? 'unknown';
         const recipient = send.recipient || 'unknown';
         const iron = send.iron || 0;
         const wood = send.wood || 0;
@@ -79,7 +85,7 @@ export function generateResourcesReceivedLeaderboard(gameId: string) {
 
 async function buildResourcesReceivedLeaderboard(gameId: string) {
     const allResourceSends = await ActivitiesModel.findAll({
-        attributes: ['player_name', 'iron', 'wood', 'recipient', 'player_faction'],
+        attributes: ['player_id', 'player_name', 'iron', 'wood', 'recipient', 'player_faction'],
         where: {
             game_id: gameId,
             type: 'resources_sent'
@@ -87,11 +93,16 @@ async function buildResourcesReceivedLeaderboard(gameId: string) {
         order: ['recipient']
     });
 
-    // Aggregate resources received by recipient and sender
+    const names = await getPlayerNames();
+
+    // Recipients are bare names in the data with no id to key on, so this side
+    // stays name-based; senders still resolve to their latest name.
     const recipientResources: { [recipient: string]: { totalIron: number, totalWood: number, senders: { [sender: string]: { iron: number, wood: number } } } } = {};
 
     for (const send of allResourceSends) {
-        const sender = send.player_name;
+        const sender = (send.player_id !== null && send.player_id !== undefined
+            ? names.get(send.player_id)
+            : null) ?? send.player_name ?? 'unknown';
         const recipient = send.recipient || 'unknown';
         const iron = send.iron || 0;
         const wood = send.wood || 0;

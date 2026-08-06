@@ -4,6 +4,7 @@ import { apiFetch } from "../../clients/factionsApi";
 import { ActivitiesModel } from "../../models/activities/activities.model";
 import { FactionColor } from "../../types/faction.type";
 import { getHqPositionLookup } from "./gameReport.service";
+import { getPlayerNames } from "./playerIdentity.service";
 import { ReportType, withReportCache } from "./reportCache.service";
 
 export function generatePlayerMvpLeaderboard(gameId: string) {
@@ -41,41 +42,41 @@ export function generateApmLeaderboard(gameId: string, timespan: number, uniqueO
 async function buildApmLeaderboard(gameId: string, timespan: number, uniqueOnly: boolean = false) {
     const allActions = await ActivitiesModel.findAll({
         attributes: {
-            include: ['updated_at', 'player_name', 'x', 'y']
+            include: ['updated_at', 'player_id', 'x', 'y']
         },
         where: {
             game_id: gameId
         },
         order: ['updated_at']
     })
-    const playerActions: Record<string, { time: number, x: number, y: number }[]> = {};
+
+    // Keyed by id: a rename partway through a game would otherwise split one
+    // player's actions into two windows and understate their peak rate.
+    const playerActions: Record<number, { time: number, x: number, y: number }[]> = {};
     for (const action of allActions) {
-        if (!playerActions[action.player_name]) {
-            playerActions[action.player_name] = [];
+        if (action.player_id === null || action.player_id === undefined) continue;
+
+        if (!playerActions[action.player_id]) {
+            playerActions[action.player_id] = [];
         }
+
+        const actions = playerActions[action.player_id];
 
         if (uniqueOnly) {
             // Only add if this x,y combination hasn't been seen in the current window
-            const lastAction = playerActions[action.player_name][playerActions[action.player_name].length - 1];
+            const lastAction = actions[actions.length - 1];
             if (!lastAction || lastAction.x !== action.x || lastAction.y !== action.y) {
-                playerActions[action.player_name].push({
-                    time: action.updated_at,
-                    x: action.x,
-                    y: action.y
-                });
+                actions.push({ time: action.updated_at, x: action.x, y: action.y });
             }
         } else {
-            playerActions[action.player_name].push({
-                time: action.updated_at,
-                x: action.x,
-                y: action.y
-            });
+            actions.push({ time: action.updated_at, x: action.x, y: action.y });
         }
     }
 
-    const leaderboard: { [player: string]: number } = {};
+    const names = await getPlayerNames();
+    const leaderboard: { playerId: number; player: string; apm: number }[] = [];
 
-    for (const [player, actions] of Object.entries(playerActions)) {
+    for (const [playerId, actions] of Object.entries(playerActions)) {
         let highestApm = 0;
 
         // Use sliding window approach
@@ -93,12 +94,15 @@ async function buildApmLeaderboard(gameId: string, timespan: number, uniqueOnly:
             highestApm = Math.max(highestApm, rightIndex - leftIndex + 1);
         }
 
-        leaderboard[player] = highestApm;
+        const id = Number(playerId);
+        leaderboard.push({
+            playerId: id,
+            player: names.get(id) ?? `Player ${id}`,
+            apm: highestApm,
+        });
     }
 
-    const sortedLeaderboard = Object.entries(leaderboard).sort((a, b) => b[1] - a[1]);
-
-    return sortedLeaderboard;
+    return leaderboard.sort((a, b) => b.apm - a.apm);
 }
 
 export type PlayerLootTeamEntry = {
@@ -128,7 +132,10 @@ async function buildPlayerLootLeaderboard(gameId: string): Promise<PlayerLootLea
         }
     });
 
-    const hqByPositions = await getHqPositionLookup(gameId);
+    const [hqByPositions, names] = await Promise.all([
+        getHqPositionLookup(gameId),
+        getPlayerNames(),
+    ]);
 
     const byPlayer = new Map<string, PlayerLootLeaderboardEntry & { teamMap: Map<string, PlayerLootTeamEntry> }>();
 
@@ -137,7 +144,10 @@ async function buildPlayerLootLeaderboard(gameId: string): Promise<PlayerLootLea
         const y = Number(loot.y) || 0;
         const vp = Number(loot.amount) || 0;
         const playerId = loot.player_id ?? null;
-        const playerName = loot.player_name ?? 'unknown';
+        // Latest known name, so a rename doesn't show the same person twice.
+        const playerName = (playerId !== null ? names.get(playerId) : null)
+            ?? loot.player_name
+            ?? 'unknown';
         const groupKey = `${playerId}`;
         const hqPositionKey = `${x}:${y}`;
         const teamKey = hqByPositions[hqPositionKey];
@@ -165,7 +175,7 @@ async function buildPlayerLootLeaderboard(gameId: string): Promise<PlayerLootLea
             });
         }
 
-        const team = entry.teamMap.get(teamKey);
+        const team = entry.teamMap.get(teamKey)!;
         team.totalVp += vp;
         team.lootCount += 1;
     }

@@ -1,6 +1,7 @@
 /** Tile-ownership leaderboard. */
 
 import { ActivitiesModel } from "../../models/activities/activities.model";
+import { getPlayerNames } from "./playerIdentity.service";
 import { ReportType, withReportCache } from "./reportCache.service";
 
 export function generateTileLeaderboard(gameId: string) {
@@ -9,7 +10,7 @@ export function generateTileLeaderboard(gameId: string) {
 
 async function buildTileLeaderboard(gameId: string) {
     const allTileUpdates = await ActivitiesModel.findAll({
-        attributes: ['player_name', 'updated_at', 'x', 'y', 'captured'],
+        attributes: ['player_id', 'player_name', 'updated_at', 'x', 'y', 'captured'],
         where: {
             game_id: gameId,
             captured: true
@@ -17,38 +18,41 @@ async function buildTileLeaderboard(gameId: string) {
         order: ['updated_at']
     });
 
-    // Track current, max concurrent, and all-time tile ownership per player
-    const playerTileCounts: { [player: string]: Set<string> } = {};
-    const playerEverOwnedTiles: { [player: string]: Set<string> } = {};
-    const playerMaxTiles: { [player: string]: number } = {};
+    // Keyed by player id — a rename would otherwise hand the player's tiles to a
+    // "new" player and halve both their peak and their all-time count.
+    const playerTileCounts: { [playerId: string]: Set<string> } = {};
+    const playerEverOwnedTiles: { [playerId: string]: Set<string> } = {};
+    const playerMaxTiles: { [playerId: string]: number } = {};
 
     // Process updates chronologically to track ownership
     for (const update of allTileUpdates) {
-        const playerName = update.player_name;
+        if (update.player_id === null || update.player_id === undefined) continue;
+
+        const playerKey = String(update.player_id);
         const tileKey = `${update.x},${update.y}`;
 
-        if (!playerTileCounts[playerName]) {
-            playerTileCounts[playerName] = new Set();
+        if (!playerTileCounts[playerKey]) {
+            playerTileCounts[playerKey] = new Set();
         }
-        if (!playerEverOwnedTiles[playerName]) {
-            playerEverOwnedTiles[playerName] = new Set();
+        if (!playerEverOwnedTiles[playerKey]) {
+            playerEverOwnedTiles[playerKey] = new Set();
         }
 
-        playerEverOwnedTiles[playerName].add(tileKey);
+        playerEverOwnedTiles[playerKey].add(tileKey);
 
         // Remove tile from previous owner's set if it exists
         for (const [player, tiles] of Object.entries(playerTileCounts)) {
-            if (player !== playerName && tiles.delete(tileKey)) {
+            if (player !== playerKey && tiles.delete(tileKey)) {
                 break;
             }
         }
 
-        playerTileCounts[playerName].add(tileKey);
+        playerTileCounts[playerKey].add(tileKey);
 
-        const currentCount = playerTileCounts[playerName].size;
-        playerMaxTiles[playerName] = Math.max(
+        const currentCount = playerTileCounts[playerKey].size;
+        playerMaxTiles[playerKey] = Math.max(
             currentCount,
-            playerMaxTiles[playerName] || 0
+            playerMaxTiles[playerKey] || 0
         );
     }
 
@@ -61,14 +65,18 @@ async function buildTileLeaderboard(gameId: string) {
     });
     const totalDistinctTiles = allTiles.size;
 
-    const leaderboardWithPercentage = sortedLeaderboard.map(([player, maxConcurrent]) => {
+    const names = await getPlayerNames();
+
+    const leaderboardWithPercentage = sortedLeaderboard.map(([playerKey, maxConcurrent]) => {
+        const playerId = Number(playerKey);
         const distinctPercentage = totalDistinctTiles > 0
             ? ((maxConcurrent as number) / totalDistinctTiles * 100).toFixed(1)
             : '0.0';
-        const everOwned = playerEverOwnedTiles[player]?.size ?? 0;
+        const everOwned = playerEverOwnedTiles[playerKey]?.size ?? 0;
         const everOwnedPercentage = totalDistinctTiles > 0
         ? (everOwned / totalDistinctTiles * 100).toFixed(1)
         : '0.0';
+        const player = names.get(playerId) ?? `Player ${playerId}`;
         return [player, maxConcurrent, `${distinctPercentage}%`, everOwned, `${everOwnedPercentage}%`];
     });
 

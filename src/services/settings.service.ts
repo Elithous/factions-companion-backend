@@ -7,7 +7,7 @@ type SocketSettings = {
 
 interface KeyMap {
     socket: SocketSettings,
-    hiddenPlayers: string[]
+    hiddenPlayers: number[]
     misc: any
 }
 

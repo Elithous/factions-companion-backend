@@ -35,8 +35,8 @@ export class ActivitiesModel extends BaseModel<InferAttributes<ActivitiesModel>,
     // spec_picked
     declare name: string;
 
-    declare player_id: number;
-    declare player_name: string;
+    declare player_id: number | null;
+    declare player_name: string | null;
     declare player_faction: FactionColor | null;
     declare game_id: number;
     declare created_at: number;
@@ -149,7 +149,11 @@ export class ActivitiesModel extends BaseModel<InferAttributes<ActivitiesModel>,
                 { fields: ['game_id'] },
                 { fields: ['player_id'] },
                 { fields: ['type'] },
-                { fields: ['x', 'y'] }
+                { fields: ['x', 'y'] },
+                // Cover the two grouped scans the cross-game player index runs;
+                // without these each one reads the whole table.
+                { fields: ['player_id', 'player_name', 'updated_at'] },
+                { fields: ['player_id', 'game_id'] }
             ]
         }
     }
