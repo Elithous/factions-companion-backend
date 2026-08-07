@@ -75,6 +75,7 @@ export interface TileSupportTypeEntry {
 
 export interface TileSupportPlayerEntry {
     player: string;
+    playerId: number | null;
     faction: string;
     count: number;
     units: number;
@@ -100,6 +101,8 @@ export interface TileOwnershipSegment {
     capturedFrom: string | null;
     /** Whose attack opened this segment. Null for the pre-first-capture segment. */
     capturedBy: string | null;
+    /** Stable id for `capturedBy`, where the capturing actor was identifiable. */
+    capturedById: number | null;
 }
 
 export interface TileOwnershipFactionEntry {
@@ -205,6 +208,7 @@ export interface TileWorkerProjectEntry {
 
 export interface TileWorkerPlayerEntry {
     player: string;
+    playerId: number | null;
     faction: string;
     events: number;
     workers: number;
@@ -345,7 +349,7 @@ async function buildTileDetail(
         tile: { x, y },
         activityCount: filtered.length,
         terrain,
-        support: buildSupportSummary(filtered),
+        support: buildSupportSummary(filtered, playerNames),
         ownership: isHq
             ? null
             : buildOwnershipSummary(transitions, startingFaction, filter, {
@@ -353,10 +357,10 @@ async function buildTileDetail(
                 gameEnd: Number(gameEnd) || 0,
                 terrain,
             }),
-        loot: isHq ? buildLootSummary(filtered, hqFaction!) : null,
+        loot: isHq ? buildLootSummary(filtered, hqFaction!, playerNames) : null,
         players: buildPlayerSummary(filtered, captureActivityIds, playerNames),
         buildingKills: buildBuildingKillSummary(filtered, x, y),
-        workers: buildWorkerSummary(filtered),
+        workers: buildWorkerSummary(filtered, playerNames),
     };
 }
 
@@ -364,7 +368,31 @@ async function buildTileDetail(
 const equalsFaction = (a: string | null | undefined, b: string) =>
     (a ?? '').toUpperCase() === b.toUpperCase();
 
-function buildSupportSummary(activities: ActivitiesModel[]): TileSupportSummary {
+/**
+ * How a per-player row is grouped and labelled.
+ *
+ * Keyed on the stable id wherever there is one, so a mid-game rename stays a
+ * single row, and the name reported is the latest known one rather than
+ * whichever was in use for that particular action. Rows are also what the UI
+ * matches on when it highlights a player, so every section has to agree.
+ * Activities with no id fall back to grouping by name.
+ */
+function playerIdentity(
+    activity: ActivitiesModel,
+    playerNames: Map<number, string>
+): { key: string; playerId: number | null; player: string } {
+    const playerId = activity.player_id ?? null;
+    const player = (playerId !== null ? playerNames.get(playerId) : undefined)
+        ?? activity.player_name
+        ?? (playerId !== null ? `Player ${playerId}` : 'unknown');
+
+    return { key: playerId !== null ? `id:${playerId}` : `name:${player}`, playerId, player };
+}
+
+function buildSupportSummary(
+    activities: ActivitiesModel[],
+    playerNames: Map<number, string>
+): TileSupportSummary {
     const supports = activities.filter(activity => activity.type === 'support_sent');
 
     const byType = new Map<string, TileSupportTypeEntry>();
@@ -376,7 +404,7 @@ function buildSupportSummary(activities: ActivitiesModel[]): TileSupportSummary 
     for (const support of supports) {
         const supportType = support.support_type || support.name || 'unknown';
         const faction = factionOf(support.player_faction);
-        const player = support.player_name ?? 'unknown';
+        const identity = playerIdentity(support, playerNames);
         // Support activities carry a unit count on some types and not others;
         // treat a missing amount as a single unit so the counts stay comparable.
         const units = Number(support.amount) || 1;
@@ -396,10 +424,18 @@ function buildSupportSummary(activities: ActivitiesModel[]): TileSupportSummary 
         typeEntry.kills += kills;
         typeEntry.power += power;
 
-        if (!byPlayer.has(player)) {
-            byPlayer.set(player, { player, faction, count: 0, units: 0, kills: 0, power: 0 });
+        if (!byPlayer.has(identity.key)) {
+            byPlayer.set(identity.key, {
+                player: identity.player,
+                playerId: identity.playerId,
+                faction,
+                count: 0,
+                units: 0,
+                kills: 0,
+                power: 0,
+            });
         }
-        const playerEntry = byPlayer.get(player)!;
+        const playerEntry = byPlayer.get(identity.key)!;
         playerEntry.count += 1;
         playerEntry.units += units;
         playerEntry.kills += kills;
@@ -428,6 +464,12 @@ interface OwnershipTransition {
     player: string | null;
     from: string;
     by: string | null;
+    /**
+     * Stable id for `by`, where the capturing actor was identifiable. `player`
+     * has no equivalent — it can come from the game's own `tile_player` field,
+     * which is a bare name.
+     */
+    byId: number | null;
     /** The activity that produced the change, for crediting the capture. */
     activityId: number | null;
 }
@@ -472,6 +514,7 @@ function deriveOwnershipTransitions(
             player: activity.tile_player ?? (isCapturingActor ? activity.player_name : null),
             from: currentFaction,
             by: isCapturingActor ? activity.player_name : null,
+            byId: isCapturingActor ? activity.player_id ?? null : null,
             activityId: activity.id ?? null,
         });
 
@@ -517,6 +560,7 @@ function buildOwnershipSummary(
         seconds: 0,
         capturedFrom: null,
         capturedBy: null,
+        capturedById: null,
     };
 
     const pushSegment = (segment: TileOwnershipSegment | null, endTime: number) => {
@@ -540,6 +584,7 @@ function buildOwnershipSummary(
             seconds: 0,
             capturedFrom: transition.from,
             capturedBy: transition.by,
+            capturedById: transition.byId,
         };
     }
 
@@ -594,11 +639,12 @@ function buildOwnershipSummary(
  */
 function buildLootSummary(
     activities: ActivitiesModel[],
-    hqFaction: string
+    hqFaction: string,
+    playerNames: Map<number, string>
 ): TileLootSummary {
     const loots = activities.filter(activity => activity.type === 'loot');
 
-    const byFaction = new Map<string, TileLootFactionEntry & { playerNames: Set<string> }>();
+    const byFaction = new Map<string, TileLootFactionEntry & { playerKeys: Set<string> }>();
     const byPlayer = new Map<string, TileLootPlayerEntry>();
 
     let totalVp = 0;
@@ -608,7 +654,7 @@ function buildLootSummary(
     for (const loot of loots) {
         const vp = Number(loot.amount) || 0;
         const faction = factionOf(loot.player_faction);
-        const player = loot.player_name ?? 'unknown';
+        const identity = playerIdentity(loot, playerNames);
         const time = Number(loot.created_at) || Number(loot.updated_at) || 0;
 
         totalVp += vp;
@@ -616,17 +662,17 @@ function buildLootSummary(
         lastLoot = lastLoot === null ? time : Math.max(lastLoot, time);
 
         if (!byFaction.has(faction)) {
-            byFaction.set(faction, { faction, vp: 0, loots: 0, players: 0, playerNames: new Set() });
+            byFaction.set(faction, { faction, vp: 0, loots: 0, players: 0, playerKeys: new Set() });
         }
         const factionEntry = byFaction.get(faction)!;
         factionEntry.vp += vp;
         factionEntry.loots += 1;
-        factionEntry.playerNames.add(player);
+        factionEntry.playerKeys.add(identity.key);
 
-        if (!byPlayer.has(player)) {
-            byPlayer.set(player, {
-                player,
-                playerId: loot.player_id ?? null,
+        if (!byPlayer.has(identity.key)) {
+            byPlayer.set(identity.key, {
+                player: identity.player,
+                playerId: identity.playerId,
                 faction,
                 vp: 0,
                 loots: 0,
@@ -634,7 +680,7 @@ function buildLootSummary(
                 lastLoot: null,
             });
         }
-        const playerEntry = byPlayer.get(player)!;
+        const playerEntry = byPlayer.get(identity.key)!;
         playerEntry.vp += vp;
         playerEntry.loots += 1;
         playerEntry.firstLoot = playerEntry.firstLoot === null
@@ -652,7 +698,7 @@ function buildLootSummary(
         firstLoot,
         lastLoot,
         byFaction: Array.from(byFaction.values())
-            .map(({ playerNames, ...entry }) => ({ ...entry, players: playerNames.size }))
+            .map(({ playerKeys, ...entry }) => ({ ...entry, players: playerKeys.size }))
             .sort((a, b) => b.vp - a.vp || b.loots - a.loots),
         byPlayer: Array.from(byPlayer.values())
             .sort((a, b) => b.vp - a.vp || b.loots - a.loots),
@@ -801,7 +847,10 @@ function buildBuildingKillSummary(
     };
 }
 
-function buildWorkerSummary(activities: ActivitiesModel[]): TileWorkerSummary {
+function buildWorkerSummary(
+    activities: ActivitiesModel[],
+    playerNames: Map<number, string>
+): TileWorkerSummary {
     const workerActivities = activities.filter(activity =>
         (WORKER_TYPES as readonly string[]).includes(activity.type)
     );
@@ -817,7 +866,7 @@ function buildWorkerSummary(activities: ActivitiesModel[]): TileWorkerSummary {
     for (const activity of workerActivities) {
         const workers = Number(activity.amount) || 0;
         const projectType = activity.project_type || activity.name || 'unspecified';
-        const player = activity.player_name ?? 'unknown';
+        const identity = playerIdentity(activity, playerNames);
         const faction = factionOf(activity.player_faction);
 
         totalWorkers += workers;
@@ -838,10 +887,16 @@ function buildWorkerSummary(activities: ActivitiesModel[]): TileWorkerSummary {
         projectEntry.events += 1;
         projectEntry.workers += workers;
 
-        if (!byPlayer.has(player)) {
-            byPlayer.set(player, { player, faction, events: 0, workers: 0 });
+        if (!byPlayer.has(identity.key)) {
+            byPlayer.set(identity.key, {
+                player: identity.player,
+                playerId: identity.playerId,
+                faction,
+                events: 0,
+                workers: 0,
+            });
         }
-        const playerEntry = byPlayer.get(player)!;
+        const playerEntry = byPlayer.get(identity.key)!;
         playerEntry.events += 1;
         playerEntry.workers += workers;
     }
