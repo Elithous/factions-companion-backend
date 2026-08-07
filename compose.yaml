@@ -46,7 +46,7 @@ services:
       - '${DB_PORT}:3306'
     expose:
       # Opens port 3306 on the container
-      - '{$DB_PORT}'
+      - '${DB_PORT}'
     # Where our data will be persisted
     volumes:
       - ./db-data:/var/lib/mysql

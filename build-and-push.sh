@@ -24,7 +24,7 @@ fi
 echo "Docker registry is running."
 
 # Get the image ID of the newly built image
-IMAGE_ID=$(docker images -q backend-server:latest)
+IMAGE_ID=$(docker images -q factions-companion-backend-server:latest)
 if [ -z "$IMAGE_ID" ]; then
   echo "Error: Could not find built image"
   exit 1
