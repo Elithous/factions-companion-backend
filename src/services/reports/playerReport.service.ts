@@ -45,7 +45,8 @@ async function buildApmLeaderboard(gameId: string, timespan: number, uniqueOnly:
             include: ['updated_at', 'player_id', 'x', 'y']
         },
         where: {
-            game_id: gameId
+            game_id: gameId,
+            type: ['soldiers_attack', 'soldiers_defend']
         },
         order: ['updated_at']
     })
