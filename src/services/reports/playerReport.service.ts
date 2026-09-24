@@ -75,10 +75,11 @@ async function buildApmLeaderboard(gameId: string, timespan: number, uniqueOnly:
     }
 
     const names = await getPlayerNames();
-    const leaderboard: { playerId: number; player: string; apm: number }[] = [];
+    const leaderboard: { playerId: number; player: string; apm: number, range: [number, number] }[] = [];
 
     for (const [playerId, actions] of Object.entries(playerActions)) {
         let highestApm = 0;
+        let highestRange: [number, number] = [0, 0];
 
         // Use sliding window approach
         let leftIndex = 0;
@@ -92,7 +93,10 @@ async function buildApmLeaderboard(gameId: string, timespan: number, uniqueOnly:
             }
 
             // Current window size is rightIndex - leftIndex + 1
-            highestApm = Math.max(highestApm, rightIndex - leftIndex + 1);
+            if (rightIndex - leftIndex + 1 > highestApm) {
+                highestApm = rightIndex - leftIndex + 1
+                highestRange = [actions[leftIndex].time, actions[rightIndex].time];
+            }
         }
 
         const id = Number(playerId);
@@ -100,6 +104,7 @@ async function buildApmLeaderboard(gameId: string, timespan: number, uniqueOnly:
             playerId: id,
             player: names.get(id) ?? `Player ${id}`,
             apm: highestApm,
+            range: highestRange,
         });
     }
 
