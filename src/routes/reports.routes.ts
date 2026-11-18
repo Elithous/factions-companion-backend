@@ -1,5 +1,6 @@
 import express from 'express';
 
+import { requireAdmin } from '../http/adminAuth';
 import {
     getActivePlayers,
     getAllPlayers,
@@ -57,7 +58,8 @@ router.get('/games/timespan', getGameTimespan);
 router.get('/games/config', getGameConfig);
 router.get('/games/buildings', getBuildingCatalogue);
 router.get('/games/projects', getProjectTrees);
-router.post('/games/projects', importProjectTree);
+// Overwrites stored definitions, so it's admin-only like the /websocket routes.
+router.post('/games/projects', requireAdmin, importProjectTree);
 
 // Buildings
 router.get('/buildings/kills', getBuildingKillLeaderboard);

@@ -11,6 +11,14 @@ import 'dotenv/config';
 
 export const serverConfig = {
     PORT: process.env.PORT || '4000',
+    /**
+     * How many reverse-proxy hops to trust for the client IP (X-Forwarded-For).
+     * Behind Caddy, set this to 1. Leave unset when nothing sits in front,
+     * otherwise clients could spoof their IP and dodge rate limits.
+     */
+    TRUST_PROXY: process.env.TRUST_PROXY,
+    /** Report requests allowed per client IP per minute. */
+    REPORT_RATE_LIMIT: parseInt(process.env.REPORT_RATE_LIMIT ?? '', 10) || 120,
 };
 
 export const dbConfig = {

@@ -3,7 +3,11 @@ import { QueryTypes } from "sequelize";
 import { apiFetch } from "../../clients/factionsApi";
 import { sequelize } from "../../db";
 import { PlayerProfileResponse } from "../../types/apiResponses/playerProfile.type";
+import { HttpError } from "../../http/errors";
 import { getPlayerIndex } from "./playerIdentity.service";
+
+/** Minimum gap between honoured refreshes of one player's profile. */
+const REFRESH_COOLDOWN_S = 5 * 60;
 
 /** Career total and per-game average. */
 export type StatSummary = {
@@ -178,10 +182,17 @@ export async function getPlayerProfile(
     playerId: number,
     options: { refresh?: boolean } = {}
 ): Promise<PlayerProfile> {
-    if (options.refresh) cache.delete(playerId);
-
     const cached = cache.get(playerId);
-    if (cached) return cached;
+    // A refresh is honoured at most once per cooldown. Each one spends an
+    // upstream call on our token, and the Update button is public.
+    const canRefresh = !cached || Date.now() / 1000 - cached.refreshedAt >= REFRESH_COOLDOWN_S;
+    if (cached && !(options.refresh && canRefresh)) return cached;
+
+    // Only players we hold data for get a profile. Otherwise any number in the
+    // URL would trigger an upstream call and a new cache entry.
+    const index = await getPlayerIndex();
+    const local = index.find(entry => entry.playerId === playerId);
+    if (!local) throw new HttpError(404, `No data for player ${playerId}`);
 
     let upstream: PlayerProfileResponse | null = null;
     try {
@@ -192,13 +203,10 @@ export async function getPlayerProfile(
         console.error(`Failed to fetch upstream profile for player ${playerId}:`, error);
     }
 
-    const [perGame, factionCounts, index] = await Promise.all([
+    const [perGame, factionCounts] = await Promise.all([
         getPerGameTotals(playerId),
         getFactionCounts(playerId),
-        getPlayerIndex(),
     ]);
-
-    const local = index.find(entry => entry.playerId === playerId);
 
     const profile: PlayerProfile = {
         playerId,

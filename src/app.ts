@@ -9,12 +9,15 @@ import { assertConfig, serverConfig } from './config';
 import { initDB } from './db';
 import { warnIfAdminKeyMissing } from './http/adminAuth';
 import { errorHandler } from './http/errors';
+import { parseTrustProxy } from './http/rateLimit';
 import routes from './routes';
 import { initSettings } from './services/settings.service';
 
 function createServer(): Express {
     const app = express();
 
+    // Decides what req.ip is, which the rate limiter keys on.
+    app.set('trust proxy', parseTrustProxy());
     app.use(cors());
     // Definition payloads are posted whole and run to tens of thousands of
     // lines, so the default 100kb body limit is raised.

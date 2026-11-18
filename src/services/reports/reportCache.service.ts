@@ -149,15 +149,43 @@ export async function withReportCache<T>(
     generate: () => Promise<T>,
     params: Record<string, any> = {}
 ): Promise<T> {
-    const cached = await getCachedReport(gameId, reportType, params);
-    if (cached) {
-        return cached as T;
-    }
+    return coalesce(inFlightKey(gameId, reportType, params), async () => {
+        const cached = await getCachedReport(gameId, reportType, params);
+        if (cached) {
+            return cached as T;
+        }
 
-    const data = await generate();
-    await cacheReport(gameId, reportType, data, params);
+        const data = await generate();
+        await cacheReport(gameId, reportType, data, params);
 
-    return data;
+        return data;
+    });
+}
+
+/** Builds in progress, keyed by what they'd be cached under. */
+const inFlight = new Map<string, Promise<unknown>>();
+
+/**
+ * Shares one build between identical concurrent requests.
+ *
+ * Without this, a popular report expiring (or a game page shared somewhere
+ * busy) means every request that arrives before the first build finishes
+ * runs its own copy of the same expensive query.
+ *
+ * Only for plain-JSON params: Sequelize operators are Symbol keys, which
+ * JSON.stringify drops, so two different date ranges would collide.
+ */
+function coalesce<T>(key: string, work: () => Promise<T>): Promise<T> {
+    const existing = inFlight.get(key);
+    if (existing) return existing as Promise<T>;
+
+    const promise = work().finally(() => inFlight.delete(key));
+    inFlight.set(key, promise);
+    return promise;
+}
+
+function inFlightKey(gameId: string | null, reportType: ReportType, params: Record<string, any>) {
+    return `${reportType}|${gameId ?? ''}|${JSON.stringify(params)}`;
 }
 
 /**
@@ -180,17 +208,21 @@ export async function withFilteredReportCache<T>(
     const isDateFiltered = !!(filter.created_at || filter.updated_at);
     const gameId = `${filter.game_id}`;
 
+    // Not coalesced either: the date bounds are Symbol-keyed operators (see coalesce).
     if (isDateFiltered) {
         return generate();
     }
 
-    const cached = await getCachedReport(gameId, reportType, filter as Record<string, any>);
-    if (cached) {
-        return cached as T;
-    }
+    const params = filter as Record<string, any>;
+    return coalesce(inFlightKey(gameId, reportType, params), async () => {
+        const cached = await getCachedReport(gameId, reportType, params);
+        if (cached) {
+            return cached as T;
+        }
 
-    const data = await generate();
-    await cacheReport(gameId, reportType, data, filter as Record<string, any>, cacheDuration);
+        const data = await generate();
+        await cacheReport(gameId, reportType, data, params, cacheDuration);
 
-    return data;
+        return data;
+    });
 }

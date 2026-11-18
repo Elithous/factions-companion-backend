@@ -6,6 +6,7 @@ import { handleMessage, processWorldMessages } from "../services/factionsWebsock
 import { addToWatchList, getSetting, getWatchList, removeFromWatchList } from "../services/settings.service";
 import { saveAllCaseData, savePastActivities, updateMissingTileData } from "../services/activities.service";
 import { apiFetch } from "../clients/factionsApi";
+import { invalidateCache } from "../services/reports/reportCache.service";
 import { FactionsGame } from "../types/apiResponses/factionsGame.type";
 
 const WORLD_SOCKET_FACTIONS = ['RED', 'BLUE', 'GREEN', 'YELLOW'] as const;
@@ -262,8 +263,11 @@ export async function updateAllActiveGame() {
                 console.log(`Removed game ${gameId} from watch list (status: ${game.status})`);
 
                 // Update any missing data using the logs endpoint
+                // A finished game's reports are cached forever, so any built
+                // before this backfill landed would otherwise stay incomplete.
                 savePastActivities(gameId)
                     .then(() => updateMissingTileData(gameId))
+                    .then(() => invalidateCache(gameId))
                     .catch(error => console.error(`Error backfilling game ${gameId}:`, error));
             }
         }

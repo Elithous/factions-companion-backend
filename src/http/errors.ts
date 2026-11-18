@@ -29,6 +29,8 @@ export function errorHandler(error: unknown, req: Request, res: Response, _next:
         console.error(error);
     }
 
+    // Undo any cache header set earlier in the chain, so a cache never holds onto a failure.
+    res.set('Cache-Control', 'no-store');
     res.status(status).json({
         message,
         // Named so a 500 can be traced to a handler without reading the logs.
