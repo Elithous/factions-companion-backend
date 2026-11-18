@@ -16,7 +16,7 @@ import {
     storeProjectDefinition,
 } from '../services/reports/projectDefinition.service';
 import { GAME_CONFIG_TYPES, GameConfigKind } from '../models/config.model';
-import { badRequest } from '../http/errors';
+import { HttpError, badRequest } from '../http/errors';
 
 /** `playerId` narrows the list to games that player took part in. */
 export const getAvailableGames = asyncHandler(async (req: Request, res: Response) => {
@@ -58,6 +58,18 @@ export const importProjectTree = asyncHandler(async (req: Request, res: Response
 /** Every player across every game, for picking a player before a game. */
 export const getAllPlayers = asyncHandler(async (_req: Request, res: Response) => {
     res.json(await getPlayerIndex());
+});
+
+/** One player's identity, for link previews that only need a name. */
+export const getPlayerIdentity = asyncHandler(async (req: Request, res: Response) => {
+    if (!/^\d+$/.test(req.params.playerId)) {
+        throw badRequest('Parameter playerId must be a number');
+    }
+
+    const playerId = Number(req.params.playerId);
+    const player = (await getPlayerIndex()).find(entry => entry.playerId === playerId);
+    if (!player) throw new HttpError(404, 'Player not found');
+    res.json(player);
 });
 
 export const getGameTimespan = asyncHandler(async (req: Request, res: Response) => {

@@ -9,6 +9,7 @@ import {
     getGameConfig,
     getGameSummary,
     getGameTimespan,
+    getPlayerIdentity,
     getProjectTrees,
     importProjectTree,
 } from '../controllers/game.controller';
@@ -46,6 +47,7 @@ router.get('/player/apm', getPlayerApmLeaderboard);
 router.get('/player/actions', getPlayerActionCounts);
 router.get('/player/active', getActivePlayers);
 router.get('/player/all', getAllPlayers);
+router.get('/player/identity/:playerId', getPlayerIdentity);
 router.get('/player/loot', getPlayerLootLeaderboard);
 router.get('/player/stats/:playerId', getPlayerStatsByPlayerId);
 router.get('/player/profile/:playerId', getPlayerProfileById);

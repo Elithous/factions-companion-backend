@@ -5,3 +5,5 @@ node_modules/
 src/tmp/
 data-dump/
 db-data/
+# Production stack
+deploy/backups/
