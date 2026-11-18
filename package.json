@@ -4,6 +4,8 @@
   "scripts": {
     "start": "npx tsx src/app.ts",
     "dev": "npx tsx watch src/app.ts",
+    "worker": "npx tsx src/worker.ts",
+    "dev:worker": "npx tsx watch src/worker.ts",
     "typecheck": "npx tsc --noEmit",
     "docker-start": "docker compose up --build",
     "socket-saver": "npx tsx src/scripts/startSocketSaver.ts"

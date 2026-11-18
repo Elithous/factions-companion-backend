@@ -28,6 +28,25 @@ services:
     depends_on:
       db:
         condition: service_healthy
+  # Ingestion worker: same image, no exposed port. Keep it at one replica,
+  # because each worker connects to every watched game.
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - PORT=${PORT}
+    command: npm run worker
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    networks:
+      - backend
+    env_file:
+      - .env.docker
+    depends_on:
+      db:
+        condition: service_healthy
   db:
     image: mysql:9.1.0
     restart: always

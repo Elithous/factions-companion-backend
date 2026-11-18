@@ -3,7 +3,7 @@ import { factionsConfig } from "../config";
 import ReconnectingWebSocket from "reconnecting-websocket"
 import { PlayerActivity } from "../types/playerActivity.type";
 import { handleMessage, processWorldMessages } from "../services/factionsWebsocket.service";
-import { getSetting, setSetting } from "../services/settings.service";
+import { addToWatchList, getSetting, getWatchList, removeFromWatchList } from "../services/settings.service";
 import { saveAllCaseData, savePastActivities, updateMissingTileData } from "../services/activities.service";
 import { apiFetch } from "../clients/factionsApi";
 import { FactionsGame } from "../types/apiResponses/factionsGame.type";
@@ -138,10 +138,9 @@ export async function startWorldSocket(gameId: string) {
 }
 
 export async function stopWorldSocket(gameId: string) {
-    const socket = worldSockets[gameId];
-    if (socket?.readyState === WebSocket.OPEN) {
-        socket.close(1001);
-    }
+    // Close in any state: a ReconnectingWebSocket that is still connecting
+    // would otherwise keep retrying after we've dropped our reference to it.
+    worldSockets[gameId]?.close(1001);
 
     delete worldSockets[gameId];
     delete worldSocketFactions[gameId];
@@ -174,7 +173,14 @@ export async function stopPeriodicParsing(gameId: string) {
     }
 }
 
+/** Games this process currently has a socket and parse timer for. */
+const activeWatches = new Set<string>();
+
+/** Starts collecting a game in this process. Safe to call more than once. */
 export async function watchGame(gameId: string) {
+    if (activeWatches.has(gameId)) return;
+    activeWatches.add(gameId);
+
     saveAllCaseData(gameId);
 
     await startWorldSocket(gameId);
@@ -183,22 +189,31 @@ export async function watchGame(gameId: string) {
     // TODO: Also watch worker queue, leaderboard?, chat?
 }
 
-export async function setWatchGame(gameId: string) {
-    const socketSetting = await getSetting('socket');
-    socketSetting.watchList.push(gameId);
-    setSetting('socket', socketSetting);
-
-    watchGame(gameId);
-}
-
-export async function unsetWatchGame(gameId: string) {
-    const socketSetting = await getSetting('socket');
-    socketSetting.watchList = socketSetting.watchList.filter(id => id !== gameId);
-    setSetting('socket', socketSetting);
+/** Stops collecting a game in this process. Doesn't touch the stored watch list. */
+export async function stopWatchingGame(gameId: string) {
+    if (!activeWatches.delete(gameId)) return;
 
     await stopWorldSocket(gameId);
     await stopPeriodicParsing(gameId);
     console.log(`Unwatched game ${gameId}`);
+}
+
+/**
+ * Brings this process's sockets in line with the stored watch list.
+ *
+ * The API only edits the list, and the worker calls this on a timer. That's
+ * how a watch/unwatch request reaches the sockets without the two processes
+ * sharing memory.
+ */
+export async function reconcileWatchedGames() {
+    const watchList = new Set(await getWatchList());
+
+    for (const gameId of watchList) {
+        if (!activeWatches.has(gameId)) await watchGame(gameId);
+    }
+    for (const gameId of [...activeWatches]) {
+        if (!watchList.has(gameId)) await stopWatchingGame(gameId);
+    }
 }
 
 // Function to start periodic parsing for all currently watched games
@@ -232,39 +247,27 @@ export async function updateAllActiveGame() {
         return;
     }
 
-    // Get the current socket setting and watch list
-    const socketSetting = await getSetting('socket');
-    const watchList: string[] = socketSetting.watchList || [];
-
-    // Filter games that are LOBBY or IN_PROGRESS and not already in the watch list
-    const activeGames = games.filter(game =>
-        (game.status === 'LOBBY' || game.status === 'IN_PROGRESS' || game.status === 'PLAYING') &&
-        !watchList.includes(game.id.toString())
-    );
-
-    // Add each active game to the watch list and start watching
-    for (const game of activeGames) {
-        socketSetting.watchList.push(game.id.toString());
-        await watchGame(game.id.toString());
-        console.log(`Added game ${game.id} to watch list (status: ${game.status})`);
-    }
-
-    // Filter games that are COMPLETED and in the watch list
-    const completedGames = games.filter(game =>
-        game.status === 'COMPLETED' && watchList.includes(game.id.toString())
-    );
-
-    // Remove each completed game from the watch list and stop watching
-    for (const game of completedGames) {
+    // Each change is a small read-modify-write of the stored list, so an
+    // admin edit made through the API meanwhile isn't overwritten by a stale copy.
+    for (const game of games) {
         const gameId = game.id.toString();
-        socketSetting.watchList = socketSetting.watchList.filter(id => id !== gameId);
-        await unsetWatchGame(gameId);
-        console.log(`Removed game ${game.id} from watch list (status: ${game.status})`);
 
-        // Update any missing data using the logs endpoint
-        savePastActivities(gameId).then(() => updateMissingTileData(gameId));
+        if (game.status === 'LOBBY' || game.status === 'IN_PROGRESS' || game.status === 'PLAYING') {
+            if (await addToWatchList(gameId)) {
+                console.log(`Added game ${gameId} to watch list (status: ${game.status})`);
+            }
+        }
+        else if (game.status === 'COMPLETED') {
+            if (await removeFromWatchList(gameId)) {
+                console.log(`Removed game ${gameId} from watch list (status: ${game.status})`);
+
+                // Update any missing data using the logs endpoint
+                savePastActivities(gameId)
+                    .then(() => updateMissingTileData(gameId))
+                    .catch(error => console.error(`Error backfilling game ${gameId}:`, error));
+            }
+        }
     }
 
-    // Save the updated watch list
-    await setSetting('socket', socketSetting);
+    await reconcileWatchedGames();
 }

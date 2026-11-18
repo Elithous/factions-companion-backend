@@ -27,6 +27,14 @@ export const factionsConfig = {
     AUTH_TOKEN: process.env.AUTH_TOKEN,
 };
 
+/**
+ * Shared secret for the admin routes (watch/unwatch/parse). Optional: when
+ * unset, those routes refuse every request rather than run unprotected.
+ */
+export const adminConfig = {
+    ADMIN_API_KEY: process.env.ADMIN_API_KEY,
+};
+
 /** Variables the app cannot start without. */
 const REQUIRED_VARS = [
     'DB_NAME', 'DB_HOST', 'DB_USER', 'DB_PASSWORD',
