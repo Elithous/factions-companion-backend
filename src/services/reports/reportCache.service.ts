@@ -18,7 +18,10 @@ export enum ReportType {
     BUILDING_PLACEMENT = "building_placement",
     BUILDING_SUPPLY = "building_supply",
     PLAYER_LOOT = "player_loot",
-    LOOT_ACTIONS = "loot_actions"
+    LOOT_ACTIONS = "loot_actions",
+    // Versioned: finished games are cached forever, so a shape change needs a new key.
+    GAME_SUMMARY = "game_summary_v2",
+    UNIT_TIMELINE = "unit_timeline"
 }
 
 // Default cache duration in milliseconds (1 hour)

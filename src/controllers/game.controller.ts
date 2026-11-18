@@ -9,6 +9,7 @@ import {
     getTimespan,
 } from '../services/reports/gameReport.service';
 import { generateBuildingCatalogue } from '../services/reports/buildingCatalogue.service';
+import { generateGameSummary } from '../services/reports/gameSummary.service';
 import { getPlayerIndex } from '../services/reports/playerIdentity.service';
 import {
     getProjectDefinitions,
@@ -77,4 +78,11 @@ export const getBuildingCatalogue = asyncHandler(async (req: Request, res: Respo
 
 export const getActivePlayers = asyncHandler(async (req: Request, res: Response) => {
     res.json(await getAllActivePlayers(requireQuery(req, 'gameId')));
+});
+
+/** Faction totals, standout players, contested tiles and HQ loots for one game. */
+export const getGameSummary = asyncHandler(async (req: Request, res: Response) => {
+    const gameId = requireQuery(req, 'gameId');
+    if (!/^\d+$/.test(gameId)) throw badRequest(`Invalid game id: ${gameId}`);
+    res.json(await generateGameSummary(gameId));
 });

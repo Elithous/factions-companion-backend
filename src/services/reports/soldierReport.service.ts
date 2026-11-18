@@ -2,6 +2,7 @@
 
 import { InferAttributes, WhereOptions } from "sequelize";
 import { ActivitiesModel } from "../../models/activities/activities.model";
+import { getTimespan } from "./gameReport.service";
 import { ReportType, withFilteredReportCache } from "./reportCache.service";
 
 /** Attacks and defences are the only activity types that move soldiers. */
@@ -102,4 +103,70 @@ async function buildSoldierStatsByTile(filter: ActivityFilter, unitType: UnitTyp
     }
 
     return unitsByTile;
+}
+
+/** Slices in a map timeline. Enough to scrub smoothly, small enough to send whole. */
+const TIMELINE_BUCKETS = 60;
+
+export type UnitTimeline = {
+    /** Unix seconds; the game's full span, so every metric shares one axis. */
+    start: number;
+    end: number;
+    bucketSeconds: number;
+    buckets: number;
+    /** `[x, y, units per bucket]`, one entry per tile that saw any. */
+    tiles: [number, number, number[]][];
+};
+
+/**
+ * The by-tile heatmap split into time slices, for replaying a game.
+ *
+ * Sent whole so scrubbing happens in the browser. Replaying through the date
+ * filter instead would cost two uncached requests per step.
+ * Date bounds in `filter` are ignored: the timeline always spans the game.
+ */
+export function generateUnitTimeline(filter: ActivityFilter, unitType: UnitType = 'soldiers') {
+    const { created_at: _dates, ...undated } = filter as Record<string, unknown>;
+
+    return withFilteredReportCache(
+        { ...undated, unit_type: unitType },
+        ReportType.UNIT_TIMELINE,
+        () => buildUnitTimeline(undated as ActivityFilter, unitType)
+    );
+}
+
+async function buildUnitTimeline(filter: ActivityFilter, unitType: UnitType): Promise<UnitTimeline> {
+    const gameId = String((filter as { game_id?: unknown }).game_id);
+    const [activities, timespan] = await Promise.all([
+        ActivitiesModel.findAll({
+            attributes: ['x', 'y', 'amount', 'created_at'],
+            where: { ...filter, type: UNIT_ACTIVITY_TYPES[unitType] ?? SOLDIER_ACTIVITY_TYPES },
+            raw: true,
+        }),
+        getTimespan(gameId),
+    ]);
+
+    const start = Number(timespan[0]) || 0;
+    const end = Number(timespan[1]) || start;
+    const bucketSeconds = Math.max(1, Math.ceil((end - start + 1) / TIMELINE_BUCKETS));
+
+    const tiles = new Map<string, [number, number, number[]]>();
+    for (const activity of activities) {
+        if (activity.x === null || activity.y === null) continue;
+
+        const key = `${activity.x}:${activity.y}`;
+        let tile = tiles.get(key);
+        if (!tile) {
+            tile = [activity.x, activity.y, new Array(TIMELINE_BUCKETS).fill(0)];
+            tiles.set(key, tile);
+        }
+
+        const bucket = Math.min(
+            TIMELINE_BUCKETS - 1,
+            Math.max(0, Math.floor((Number(activity.created_at) - start) / bucketSeconds))
+        );
+        tile[2][bucket] += Number(activity.amount) || 0;
+    }
+
+    return { start, end, bucketSeconds, buckets: TIMELINE_BUCKETS, tiles: [...tiles.values()] };
 }

@@ -5,6 +5,7 @@ import { buildActivityFilter, optionalQuery } from '../http/queryParams';
 import {
     generateSoldierStatsByFaction,
     generateUnitStatsByTile,
+    generateUnitTimeline,
     UnitType,
 } from '../services/reports/soldierReport.service';
 
@@ -22,4 +23,11 @@ export const getUnitStatsByTile = asyncHandler(async (req: Request, res: Respons
     const filter = buildActivityFilter(req);
     const unitType = toUnitType(optionalQuery(req, 'unitType'));
     res.json(await generateUnitStatsByTile(filter, unitType));
+});
+
+/** Per-tile units in time slices across the whole game, for the map replay. */
+export const getUnitTimeline = asyncHandler(async (req: Request, res: Response) => {
+    const filter = buildActivityFilter(req);
+    const unitType = toUnitType(optionalQuery(req, 'unitType'));
+    res.json(await generateUnitTimeline(filter, unitType));
 });

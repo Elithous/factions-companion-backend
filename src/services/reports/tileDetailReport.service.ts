@@ -34,7 +34,7 @@ import { getPlayerNames } from "./playerIdentity.service";
 import { ReportType, withReportCache } from "./reportCache.service";
 
 /** Worker deliveries aimed at a map tile rather than the player's own village. */
-const WORKER_TYPES = [
+export const WORKER_TYPES = [
     'fortification_workers_sent',
     'improvement_workers_sent',
     'dismantle_workers_sent',
@@ -42,7 +42,7 @@ const WORKER_TYPES = [
     'event_workers_sent',
 ] as const;
 
-const UNOWNED = 'UNOWNED';
+export const UNOWNED = 'UNOWNED';
 
 /**
  * `map_building_activated` rows are logged against the tile that was hit, so the
@@ -458,7 +458,7 @@ function buildSupportSummary(
     };
 }
 
-interface OwnershipTransition {
+export interface OwnershipTransition {
     time: number;
     faction: string;
     player: string | null;
@@ -486,8 +486,13 @@ interface OwnershipTransition {
  * that the tile was unowned; those rows are skipped so the last known owner
  * carries forward instead of a phantom gap opening up.
  */
-function deriveOwnershipTransitions(
-    activities: ActivitiesModel[],
+/** The activity fields the ownership walk reads. */
+type OwnershipFields =
+    | 'id' | 'tile_faction' | 'tile_player' | 'player_id' | 'player_name'
+    | 'player_faction' | 'updated_at' | 'created_at';
+
+export function deriveOwnershipTransitions(
+    activities: Pick<ActivitiesModel, OwnershipFields>[],
     startingFaction: string
 ): { transitions: OwnershipTransition[]; captureActivityIds: Set<number> } {
     const transitions: OwnershipTransition[] = [];

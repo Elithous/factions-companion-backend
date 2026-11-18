@@ -24,6 +24,8 @@ export const serverConfig = {
 export const dbConfig = {
     DB_NAME: process.env.DB_NAME,
     DB_HOST: process.env.DB_HOST,
+    /** Port to connect on. Compose pins this to 3306 inside the containers. */
+    DB_PORT: parseInt(process.env.DB_PORT ?? '', 10) || 3306,
     DB_USER: process.env.DB_USER,
     DB_PASSWORD: process.env.DB_PASSWORD,
 };

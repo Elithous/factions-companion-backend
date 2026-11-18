@@ -19,6 +19,9 @@ services:
         - PORT=${PORT}
     environment:
       NODE_ENV: production
+      # DB_PORT in the env file is the host-side port. Inside the compose
+      # network the database is always db:3306.
+      DB_PORT: 3306
     ports:
       - ${PORT}:${PORT}
     networks:
@@ -40,6 +43,9 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      # DB_PORT in the env file is the host-side port. Inside the compose
+      # network the database is always db:3306.
+      DB_PORT: 3306
     networks:
       - backend
     env_file:

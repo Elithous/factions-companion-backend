@@ -7,6 +7,7 @@ import {
     getAvailableGames,
     getBuildingCatalogue,
     getGameConfig,
+    getGameSummary,
     getGameTimespan,
     getProjectTrees,
     importProjectTree,
@@ -33,6 +34,7 @@ import {
 import {
     getSoldierStatsByFaction,
     getUnitStatsByTile,
+    getUnitTimeline,
 } from '../controllers/units.controller';
 import { getTileDetail } from '../controllers/tile.controller';
 
@@ -51,10 +53,12 @@ router.get('/player/profile/:playerId', getPlayerProfileById);
 // Soldiers
 router.get('/soldiers/faction', getSoldierStatsByFaction);
 router.get('/units/tile', getUnitStatsByTile);
+router.get('/units/timeline', getUnitTimeline);
 
 // Games
 router.get('/games', getAvailableGames);
 router.get('/games/timespan', getGameTimespan);
+router.get('/games/summary', getGameSummary);
 router.get('/games/config', getGameConfig);
 router.get('/games/buildings', getBuildingCatalogue);
 router.get('/games/projects', getProjectTrees);

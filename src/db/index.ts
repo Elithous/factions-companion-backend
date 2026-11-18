@@ -28,6 +28,7 @@ export async function initDB() {
         dbConfig.DB_PASSWORD,
         {
             host: dbConfig.DB_HOST,
+            port: dbConfig.DB_PORT,
             dialect: 'mysql'
         }
     );
