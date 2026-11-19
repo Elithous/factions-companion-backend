@@ -17,6 +17,14 @@ const worldSocketFactions: { [gameId: string]: WorldSocketFaction } = {};
 const worldSocketDiscovery: { [gameId: string]: Promise<WorldSocketFaction | null> } = {};
 const parseIntervals: { [gameId: string]: NodeJS.Timeout } = {};
 
+/**
+ * How long to wait before trying a game's websocket again. Games in the lobby
+ * refuse the connection (403) until they start, and they're watched from the
+ * lobby onwards, so the first attempt usually fails.
+ */
+const SOCKET_RETRY_MS = 5 * 60 * 1000;
+const lastSocketAttempt: { [gameId: string]: number } = {};
+
 function buildWorldSocketUrl(gameId: string, faction: WorldSocketFaction) {
     const { WS_BASE_URL, AUTH_TOKEN } = factionsConfig;
     return `${WS_BASE_URL}game/${gameId}/${faction}?token=${AUTH_TOKEN}`;
@@ -42,6 +50,7 @@ async function discoverValidFaction(gameId: string): Promise<WorldSocketFaction 
         let settled = false;
         let closedCount = 0;
         const probeSockets: WebSocket[] = [];
+        const errors = new Set<string>();
 
         const finish = (faction: WorldSocketFaction | null) => {
             if (settled) {
@@ -49,8 +58,16 @@ async function discoverValidFaction(gameId: string): Promise<WorldSocketFaction 
             }
             settled = true;
             clearTimeout(timeout);
+            if (!faction && errors.size) {
+                // One line per attempt rather than one per faction, since a
+                // lobby game fails this every few minutes until it starts.
+                console.log(`Game ${gameId} websocket refused: ${[...errors].join('; ')}`);
+            }
             for (const socket of probeSockets) {
                 socket.removeAllListeners();
+                // Closing a probe that's still connecting emits 'error', and an
+                // 'error' with no listener crashes the process.
+                socket.on('error', () => {});
                 if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) {
                     socket.close();
                 }
@@ -77,7 +94,7 @@ async function discoverValidFaction(gameId: string): Promise<WorldSocketFaction 
             });
 
             probe.on('error', (error: Error) => {
-                console.log(`${faction}: ${error.message}`);
+                errors.add(error.message);
             });
         }
     });
@@ -121,9 +138,10 @@ export async function startWorldSocket(gameId: string) {
         return;
     }
 
+    lastSocketAttempt[gameId] = Date.now();
     const faction = await resolveWorldSocketFaction(gameId);
     if (!faction) {
-        console.error(`No valid faction websocket for game ${gameId}`);
+        console.log(`No faction websocket for game ${gameId} yet (lobby games refuse until they start). Retrying every ${SOCKET_RETRY_MS / 60000} minutes.`);
         return;
     }
 
@@ -145,6 +163,7 @@ export async function stopWorldSocket(gameId: string) {
 
     delete worldSockets[gameId];
     delete worldSocketFactions[gameId];
+    delete lastSocketAttempt[gameId];
 }
 
 export async function startPeriodicParsing(gameId: string) {
@@ -214,6 +233,13 @@ export async function reconcileWatchedGames() {
     }
     for (const gameId of [...activeWatches]) {
         if (!watchList.has(gameId)) await stopWatchingGame(gameId);
+    }
+
+    // Watched games still without a socket, usually because they were in the
+    // lobby when first watched.
+    for (const gameId of activeWatches) {
+        const waited = Date.now() - (lastSocketAttempt[gameId] ?? 0);
+        if (!worldSockets[gameId] && waited >= SOCKET_RETRY_MS) await startWorldSocket(gameId);
     }
 }
 
