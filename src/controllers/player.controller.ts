@@ -11,15 +11,10 @@ import {
 import {
     generateApmLeaderboard,
     generatePlayerLootLeaderboard,
-    generatePlayerMvpLeaderboard,
 } from '../services/reports/playerReport.service';
 
 /** APM is measured over rolling windows; default to a single 60 second window. */
 const DEFAULT_APM_TIMESPANS = [60];
-
-export const getPlayerMvpLeaderboard = asyncHandler(async (req: Request, res: Response) => {
-    res.json(await generatePlayerMvpLeaderboard(requireQuery(req, 'gameId')));
-});
 
 export const getPlayerLootLeaderboard = asyncHandler(async (req: Request, res: Response) => {
     res.json(await generatePlayerLootLeaderboard(requireQuery(req, 'gameId')));

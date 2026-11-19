@@ -28,7 +28,6 @@ import {
     getPlayerActionCounts,
     getPlayerApmLeaderboard,
     getPlayerLootLeaderboard,
-    getPlayerMvpLeaderboard,
     getPlayerProfileById,
     getPlayerStatsByPlayerId,
 } from '../controllers/player.controller';
@@ -42,7 +41,6 @@ import { getTileDetail } from '../controllers/tile.controller';
 const router = express.Router();
 
 // Players
-router.get('/player/mvp', getPlayerMvpLeaderboard);
 router.get('/player/apm', getPlayerApmLeaderboard);
 router.get('/player/actions', getPlayerActionCounts);
 router.get('/player/active', getActivePlayers);

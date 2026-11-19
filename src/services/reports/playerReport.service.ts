@@ -1,36 +1,10 @@
-/** Player-centric leaderboards: MVP score, actions-per-minute and loot. */
+/** Player-centric leaderboards: actions-per-minute and loot. */
 
-import { apiFetch } from "../../clients/factionsApi";
 import { ActivitiesModel } from "../../models/activities/activities.model";
 import { FactionColor } from "../../types/faction.type";
 import { getHqPositionLookup } from "./gameReport.service";
 import { getPlayerNames } from "./playerIdentity.service";
 import { ReportType, withReportCache } from "./reportCache.service";
-
-export function generatePlayerMvpLeaderboard(gameId: string) {
-    return withReportCache(gameId, ReportType.PLAYER_MVP, () => buildPlayerMvpLeaderboard(gameId));
-}
-
-/** MVP score = soldiers sent (weighted) + workers sent. */
-async function buildPlayerMvpLeaderboard(gameId: string) {
-    const board = await apiFetch('get_leaderboard', gameId);
-
-    const solderScoreMulti = +gameId <= 22 ? 2 : 1.8;
-
-    const scores = board.map(entry => {
-        const soldierScore = entry.sentSoldiers * solderScoreMulti;
-        const workerScore = entry.sentWorkers;
-
-        return {
-            name: entry.name,
-            faction: entry.faction,
-            score: soldierScore + workerScore
-        }
-    });
-    scores.sort((a, b) => b.score - a.score);
-
-    return scores;
-}
 
 export function generateApmLeaderboard(gameId: string, timespan: number, uniqueOnly: boolean = false) {
     // The timespan and uniqueOnly flags change the result, so they key the cache entry.

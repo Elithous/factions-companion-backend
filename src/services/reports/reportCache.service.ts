@@ -3,7 +3,6 @@ import { getSetting } from "../settings.service";
 
 // Report types
 export enum ReportType {
-    PLAYER_MVP = 'player_mvp',
     APM = 'apm',
     TILE = 'tile',
     TILE_DETAIL = 'tile_detail',
