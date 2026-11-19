@@ -9,7 +9,7 @@ import { assertConfig, serverConfig } from './config';
 import { initDB } from './db';
 import { warnIfAdminKeyMissing } from './http/adminAuth';
 import { errorHandler } from './http/errors';
-import { parseTrustProxy } from './http/rateLimit';
+import { parseTrustProxy, warnIfReportRateLimitDisabled } from './http/rateLimit';
 import routes from './routes';
 import { initSettings } from './services/settings.service';
 
@@ -34,6 +34,7 @@ function createServer(): Express {
 async function start() {
     assertConfig();
     warnIfAdminKeyMissing();
+    warnIfReportRateLimitDisabled();
 
     await initDB();
     await initSettings();

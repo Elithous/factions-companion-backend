@@ -35,8 +35,27 @@ function limiter(limit: number) {
     });
 }
 
-/** Public report reads. Generous enough for someone clicking around quickly. */
-export const reportRateLimit = limiter(serverConfig.REPORT_RATE_LIMIT);
+/** REPORT_RATE_LIMIT value that turns the report limit off. */
+const RATE_LIMIT_DISABLED = -1;
+
+const noLimit = (_req: Request, _res: Response, next: NextFunction) => next();
+
+/**
+ * Public report reads. Generous enough for someone clicking around quickly.
+ *
+ * Off when REPORT_RATE_LIMIT is -1: behind a proxy that hides visitors' IPs
+ * (such as the Vercel rewrite in front of Docker Desktop), every visitor would
+ * otherwise share one limit.
+ */
+export const reportRateLimit = serverConfig.REPORT_RATE_LIMIT === RATE_LIMIT_DISABLED
+    ? noLimit
+    : limiter(serverConfig.REPORT_RATE_LIMIT);
+
+export function warnIfReportRateLimitDisabled() {
+    if (serverConfig.REPORT_RATE_LIMIT === RATE_LIMIT_DISABLED) {
+        console.warn('[server]: REPORT_RATE_LIMIT is -1, so report routes are not rate-limited.');
+    }
+}
 
 /** Admin routes. Low, so that guessing the key isn't practical. */
 export const adminRateLimit = limiter(20);

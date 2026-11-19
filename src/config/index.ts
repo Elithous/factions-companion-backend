@@ -17,7 +17,7 @@ export const serverConfig = {
      * otherwise clients could spoof their IP and dodge rate limits.
      */
     TRUST_PROXY: process.env.TRUST_PROXY,
-    /** Report requests allowed per client IP per minute. */
+    /** Report requests allowed per client IP per minute. -1 turns the limit off. */
     REPORT_RATE_LIMIT: parseInt(process.env.REPORT_RATE_LIMIT ?? '', 10) || 120,
 };
 
